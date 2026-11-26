@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 var otp by remember { mutableStateOf("") }
                 var deviceName by remember { mutableStateOf("PayVerify Android") }
                 var configMessage by remember { mutableStateOf("") }
+                var statusMessage by remember { mutableStateOf("") }
                 val localEventsFlow = remember { PayVerifyDatabaseProvider.get(this).paymentEventDao().observeAll() }
                 val localEvents by localEventsFlow.collectAsState(initial = emptyList())
                 Surface(Modifier.fillMaxSize()) {
@@ -84,10 +85,18 @@ class MainActivity : ComponentActivity() {
                         Text("Muchos bancos avisan por notificación y no por SMS. Concede el acceso a notificaciones y autoriza solo la app del banco donde recibes. Se lee en el teléfono y el texto no se guarda.")
                         Button(onClick={ startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) { Text("Abrir acceso a notificaciones") }
                         Button(onClick={
-                            listenerEnabled=NotificationManagerCompat.getEnabledListenerPackages(this@MainActivity).contains(packageName)
+                            permission=ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                            val currentSenders=prefs.getStringSet("authorized_senders", emptySet())?.toSet().orEmpty()
+                            sender=currentSenders.firstOrNull { !it.startsWith("app:") }.orEmpty()
+                            saved=currentSenders.any { !it.startsWith("app:") }
+                            enabled=prefs.getBoolean("capture_enabled", false)
+                            appRules=currentSenders.filter { it.startsWith("app:") }.toSet()
                             seenApps=prefs.getStringSet("seen_packages", emptySet())?.toSet().orEmpty()
+                            listenerEnabled=NotificationManagerCompat.getEnabledListenerPackages(this@MainActivity).contains(packageName)
                             unparsed=prefs.getInt("unparsed_count",0)
+                            statusMessage="Estado actualizado."
                         }) { Text("Actualizar estado") }
+                        if(statusMessage.isNotBlank()) Text(statusMessage)
                         Text(if(listenerEnabled) "Acceso a notificaciones concedido" else "Acceso a notificaciones pendiente")
                         val candidates=seenApps.filter { "app:$it" !in appRules }
                         if(candidates.isNotEmpty()) {
