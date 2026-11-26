@@ -22,6 +22,9 @@ import com.legaltechit.payverify.data.PayVerifyDatabaseProvider
 import com.legaltechit.payverify.security.SecureConfig
 import com.legaltechit.payverify.security.SupabaseMobileAuth
 import com.legaltechit.payverify.sync.PaymentSyncScheduler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private val askSms = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -55,7 +58,16 @@ class MainActivity : ComponentActivity() {
                 var email by remember { mutableStateOf("") }
                 var otp by remember { mutableStateOf("") }
                 var deviceName by remember { mutableStateOf("PayVerify Android") }
+                val scope = rememberCoroutineScope()
                 var configMessage by remember { mutableStateOf("") }
+                var senderMessage by remember { mutableStateOf("") }
+                var captureMessage by remember { mutableStateOf("") }
+                var authMessage by remember { mutableStateOf("") }
+                var deviceMessage by remember { mutableStateOf("") }
+                var syncMessage by remember { mutableStateOf("") }
+                var authBusy by remember { mutableStateOf(false) }
+                var deviceBusy by remember { mutableStateOf(false) }
+                var syncBusy by remember { mutableStateOf(false) }
                 var statusMessage by remember { mutableStateOf("") }
                 val localEventsFlow = remember { PayVerifyDatabaseProvider.get(this).paymentEventDao().observeAll() }
                 val localEvents by localEventsFlow.collectAsState(initial = emptyList())
@@ -70,16 +82,18 @@ class MainActivity : ComponentActivity() {
                             if(clean.isNotEmpty() && clean.length<=80) {
                                 val keepApps=(prefs.getStringSet("authorized_senders",emptySet()) ?: emptySet()).filter { it.startsWith("app:") }
                                 prefs.edit().putStringSet("authorized_senders",keepApps.toSet()+clean).apply(); saved=true
-                                appRules=keepApps.toSet()
-                            } else saved=false
+                                appRules=keepApps.toSet(); senderMessage="Remitente guardado en este teléfono."
+                            } else { saved=false; senderMessage="No se guardó: escribe el remitente exacto (máximo 80 caracteres)." }
                         }) { Text("Guardar remitente") }
                         Text(if(saved) "Remitente guardado localmente" else "Guarda un remitente exacto antes de activar")
+                        if(senderMessage.isNotBlank()) Text(senderMessage)
                         Button(onClick={
-                            if(!permission) askSms.launch(Manifest.permission.RECEIVE_SMS)
-                            else if(!saved) { enabled=false; prefs.edit().putBoolean("capture_enabled",false).apply() }
-                            else { enabled=!enabled; prefs.edit().putBoolean("capture_enabled",enabled).apply() }
+                            if(!permission) { captureMessage="Solicitando permiso SMS…"; askSms.launch(Manifest.permission.RECEIVE_SMS) }
+                            else if(!saved) { enabled=false; prefs.edit().putBoolean("capture_enabled",false).apply(); captureMessage="Primero guarda un remitente SMS autorizado." }
+                            else { enabled=!enabled; prefs.edit().putBoolean("capture_enabled",enabled).apply(); captureMessage=if(enabled) "Captura SMS activada." else "Captura SMS pausada." }
                         }) { Text(if(enabled) "Pausar captura" else if(!permission) "Conceder permiso y activar" else "Activar captura") }
                         Text(if(permission) "Permiso SMS concedido" else "Permiso SMS pendiente")
+                        if(captureMessage.isNotBlank()) Text(captureMessage)
                         Divider()
                         Text("Notificaciones de las apps de los bancos", style=MaterialTheme.typography.titleMedium)
                         Text("Muchos bancos avisan por notificación y no por SMS. Concede el acceso a notificaciones y autoriza solo la app del banco donde recibes. Se lee en el teléfono y el texto no se guarda.")
@@ -177,24 +191,52 @@ class MainActivity : ComponentActivity() {
                         }) { Text("Guardar conexión") }
                         Text(configMessage, style=MaterialTheme.typography.bodyMedium)
                         OutlinedTextField(value=email,onValueChange={email=it},label={Text("Correo de acceso")},singleLine=true,modifier=Modifier.fillMaxWidth())
-                        Button(onClick={try { SupabaseMobileAuth.requestEmailOtp(this@MainActivity,email); configMessage="Código enviado al correo." } catch(e:Exception) { configMessage=e.message?: "No se pudo solicitar código." }}) { Text("Solicitar código de acceso") }
+                        Button(enabled=!authBusy,onClick={
+                            if(email.trim().isBlank()) authMessage="Escribe el correo de acceso."
+                            else scope.launch {
+                                authBusy=true; authMessage="Solicitando código…"
+                                try { withContext(Dispatchers.IO) { SupabaseMobileAuth.requestEmailOtp(this@MainActivity,email) }; authMessage="Solicitud aceptada. Revisa tu correo."
+                                } catch(e:Exception) { authMessage=e.message?: "No se pudo solicitar código." }
+                                finally { authBusy=false }
+                            }
+                        }) { Text(if(authBusy) "Procesando…" else "Solicitar código de acceso") }
+                        if(authMessage.isNotBlank()) Text(authMessage)
                         OutlinedTextField(value=otp,onValueChange={otp=it},label={Text("Código de un solo uso")},singleLine=true,modifier=Modifier.fillMaxWidth())
-                        Button(onClick={try {
-                            SupabaseMobileAuth.verifyEmailOtp(this@MainActivity,email,otp)
-                            configMessage="Sesión iniciada de forma segura."
-                        } catch(e:Exception) { configMessage=e.message?: "No se pudo validar el código." }}) { Text("Verificar código") }
+                        Button(enabled=!authBusy,onClick={
+                            if(email.trim().isBlank() || otp.trim().isBlank()) authMessage="Escribe el correo y el código recibido."
+                            else scope.launch {
+                                authBusy=true; authMessage="Verificando código…"
+                                try { withContext(Dispatchers.IO) { SupabaseMobileAuth.verifyEmailOtp(this@MainActivity,email,otp) }; authMessage="Sesión iniciada de forma segura."; otp=""
+                                } catch(e:Exception) { authMessage=e.message?: "No se pudo validar el código." }
+                                finally { authBusy=false }
+                            }
+                        }) { Text(if(authBusy) "Verificando…" else "Verificar código") }
                         OutlinedTextField(value=deviceName,onValueChange={deviceName=it},label={Text("Nombre del dispositivo")},singleLine=true,modifier=Modifier.fillMaxWidth())
-                        Button(onClick={try {
-                            if(SecureConfig.get(this@MainActivity,"access_token").isBlank()) throw IllegalStateException("Inicia sesión primero.")
-                            deviceId=SupabaseMobileAuth.enrollDevice(this@MainActivity,orgId,deviceName)
-                            SecureConfig.set(this@MainActivity,"device_id",deviceId)
-                            configMessage="Dispositivo solicitado ($deviceId). Un administrador debe aprobarlo en el panel antes de sincronizar."
-                        } catch(e:Exception) { configMessage=e.message?: "No se pudo solicitar el dispositivo." }}) { Text("Solicitar aprobación de dispositivo") }
-                        Button(onClick={
-                            PaymentSyncScheduler.schedule(this@MainActivity)
-                            PaymentSyncScheduler.enqueueNow(this@MainActivity)
-                            configMessage="Sincronización programada. El dispositivo debe estar aprobado."
-                        }) { Text("Programar sincronización") }
+                        Button(enabled=!deviceBusy,onClick={
+                            if(SecureConfig.get(this@MainActivity,"access_token").isBlank()) deviceMessage="Inicia sesión primero."
+                            else if(orgId.trim()!=SecureConfig.get(this@MainActivity,"organization_id")) deviceMessage="Guarda primero la conexión con el UUID de esta organización."
+                            else if(deviceName.trim().isBlank()) deviceMessage="Escribe un nombre para el dispositivo."
+                            else scope.launch {
+                                deviceBusy=true; deviceMessage="Solicitando enrolamiento…"
+                                try {
+                                    val enrolled=withContext(Dispatchers.IO) { SupabaseMobileAuth.enrollDevice(this@MainActivity,orgId.trim(),deviceName.trim()) }
+                                    deviceId=enrolled; SecureConfig.set(this@MainActivity,"device_id",deviceId)
+                                    deviceMessage="Solicitud enviada ($deviceId). Falta aprobación del administrador."
+                                } catch(e:Exception) { deviceMessage=e.message?: "No se pudo solicitar el dispositivo." }
+                                finally { deviceBusy=false }
+                            }
+                        }) { Text(if(deviceBusy) "Solicitando…" else "Solicitar aprobación de dispositivo") }
+                        if(deviceMessage.isNotBlank()) Text(deviceMessage)
+                        Button(enabled=!syncBusy,onClick={
+                            syncBusy=true; syncMessage="Solicitando sincronización…"
+                            try {
+                                PaymentSyncScheduler.schedule(this@MainActivity)
+                                PaymentSyncScheduler.enqueueNow(this@MainActivity)
+                                syncMessage="Trabajo de sincronización enviado a WorkManager. Requiere conexión y dispositivo aprobado."
+                            } catch(e:Exception) { syncMessage=e.message?: "No se pudo programar la sincronización." }
+                            finally { syncBusy=false }
+                        }) { Text(if(syncBusy) "Programando…" else "Programar sincronización") }
+                        if(syncMessage.isNotBlank()) Text(syncMessage)
                         Text("Dispositivo: ${SecureConfig.get(this@MainActivity,"device_id").ifBlank { "No enrolado" }}")
                         Text("No se transmite el texto completo del SMS, OTP, PIN ni credenciales bancarias.")
                     }
