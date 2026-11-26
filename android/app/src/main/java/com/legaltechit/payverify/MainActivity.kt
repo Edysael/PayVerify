@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 var configMessage by remember { mutableStateOf("") }
                 var senderMessage by remember { mutableStateOf("") }
                 var captureMessage by remember { mutableStateOf("") }
+                var appMessage by remember { mutableStateOf("") }
                 var authMessage by remember { mutableStateOf("") }
                 var deviceMessage by remember { mutableStateOf("") }
                 var syncMessage by remember { mutableStateOf("") }
