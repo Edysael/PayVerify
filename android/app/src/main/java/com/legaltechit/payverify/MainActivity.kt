@@ -152,6 +152,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }) { Text(if(enabled) "Pausar captura" else "Activar captura solo con notificaciones") }
                         }
+                        if(appMessage.isNotBlank()) Text(appMessage)
                         if(unparsed>0) Text("Mensajes de tus bancos que no se pudieron interpretar: $unparsed. Mándame uno (con datos tapados) para agregar su plantilla.")
                         Divider()
                         Text("Pagos detectados en este dispositivo", style=MaterialTheme.typography.titleMedium)
