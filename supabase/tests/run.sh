@@ -14,5 +14,6 @@ echo "== re-apply 0005 (must be idempotent)"; $P -f migrations/0005_orders_and_m
 $P -f tests/0005_matching_test.sql
 $P -f tests/0005_reconcile_e2e_test.sql
 $P -f tests/0005_rls_test.sql
+$P -f tests/0008_performance_indexes_test.sql
 [ "${SIMULATE_SHARED:-1}" = 1 ] && $P -f tests/99_existing_untouched_test.sql
 echo "SQL OK"
