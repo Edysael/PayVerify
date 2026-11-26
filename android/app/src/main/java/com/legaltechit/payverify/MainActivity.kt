@@ -249,13 +249,18 @@ class MainActivity : ComponentActivity() {
                         }) { Text(if(deviceBusy) "Solicitando…" else "Solicitar aprobación de dispositivo") }
                         if(deviceMessage.isNotBlank()) Text(deviceMessage)
                         Button(enabled=!syncBusy,onClick={
-                            syncBusy=true; syncMessage="Solicitando sincronización…"
-                            try {
-                                PaymentSyncScheduler.schedule(this@MainActivity)
-                                PaymentSyncScheduler.enqueueNow(this@MainActivity)
-                                syncMessage="Trabajo de sincronización enviado a WorkManager. Requiere conexión y dispositivo aprobado."
-                            } catch(e:Exception) { syncMessage=e.message?: "No se pudo programar la sincronización." }
-                            finally { syncBusy=false }
+                            val required=listOf("supabase_url","anon_key","access_token","organization_id","device_id")
+                            val missing=required.filter { SecureConfig.get(this@MainActivity,it).isBlank() }
+                            if(missing.isNotEmpty()) syncMessage="Antes de sincronizar: guarda la conexión, inicia sesión y solicita el enrolamiento del dispositivo."
+                            else {
+                                syncBusy=true; syncMessage="Solicitando sincronización…"
+                                try {
+                                    PaymentSyncScheduler.schedule(this@MainActivity)
+                                    PaymentSyncScheduler.enqueueNow(this@MainActivity)
+                                    syncMessage="Trabajo enviado a WorkManager. El servidor debe tener aprobado el dispositivo y el teléfono necesita internet."
+                                } catch(e:Exception) { syncMessage=e.message?: "No se pudo programar la sincronización." }
+                                finally { syncBusy=false }
+                            }
                         }) { Text(if(syncBusy) "Programando…" else "Programar sincronización") }
                         if(syncMessage.isNotBlank()) Text(syncMessage)
                         Text("Dispositivo: ${SecureConfig.get(this@MainActivity,"device_id").ifBlank { "No enrolado" }}")
