@@ -2,36 +2,35 @@
 
 ## Repositorio y CI
 - [x] Repositorio privado `Edysael/PayVerify`, rama `main`.
-- [x] CI web: pruebas y build.
-- [x] CI Android: unit tests y APK debug.
-- [x] CI SQL: migraciones y pruebas en PostgreSQL 16.
-- [x] Migración 0008 incluida y validada por CI.
-- [x] APK debug artifact `15153483173`.
+- [x] CI web, Android debug y SQL: success.
+- [x] APK debug artifact `15154955206`.
+- [x] Migration 0008 incluida y validada por CI.
 
 ## Infraestructura
-- [x] Supabase PayVerify migraciones 0001–0008 aplicadas.
+- [x] Supabase PayVerify 0001–0008 aplicado.
 - [x] 13 Edge Functions activas.
-- [x] `device-approve` y `device-revoke` versión 2, verificadas contra repo.
-- [x] Cron `payverify-expire-orders` activo cada 5 minutos.
-- [x] Vercel deployment desde commit de aplicación actual en estado `READY`.
-- [x] Alias de producción https://payverify-nine.vercel.app asignado al deployment nuevo.
+- [x] `device-approve` y `device-revoke` v2 verificadas contra repo.
+- [x] Cron cada 5 minutos.
+- [x] Hardening 0008: 19 índices y políticas RLS verificadas.
+- [x] Vercel deployment READY y alias de producción apuntando al deployment nuevo.
+- [x] Prueba SQL de producción con rollback: match/reconcile/unreconcile; sin datos QA restantes.
 - [ ] Confirmar `/api/health` desde sesión autorizada.
-- [ ] Configurar Git integration en Vercel o mantener procedimiento manual de deploy.
+- [ ] Configurar Git integration automática en Vercel o mantener deploy manual.
 
 ## Funcionalidad / aceptación
-- [ ] Login Android OTP en teléfono real.
-- [ ] Enrolar, aprobar y revocar dispositivo desde el panel.
-- [ ] Autorizar remitente SMS/app bancaria y validar captura/sync real.
-- [ ] Checkout: crear orden, actualizar pistas y consultar estado con API key protegida.
+- [ ] Login OTP en teléfono Android real.
+- [ ] Enrolar/aprobar/revocar dispositivo desde panel.
+- [ ] Captura y sync real de SMS/notificación bancaria autorizada.
+- [ ] Checkout real: crear orden, actualizar pistas y consultar estado con API key protegida.
 - [ ] Importar cartola CSV anonimizada, revisar candidatos, conciliar y deshacer.
-- [ ] Confirmar que solo el extracto cambia a `paid_confirmed`.
-- [ ] Probar aislamiento multiempresa y roles en entorno real.
+- [ ] Confirmar que solo extracto cambia a `paid_confirmed`.
+- [ ] Probar aislamiento multiempresa/roles con usuarios reales.
 - [ ] Ajustar parser con muestras bancarias anonimizadas.
 
 ## Seguridad / lanzamiento
-- [x] Hardening de índices FK y políticas RLS de bancos/remitentes aplicado.
-- [ ] Revisar avisos restantes de `SECURITY DEFINER` junto con el diseño RLS antes de cambiar permisos.
-- [ ] Verificar que SMS completo, OTP, PIN y credenciales no se almacenen ni transmitan.
-- [ ] Revisión legal, privacidad, consentimiento y políticas de distribución SMS.
+- [x] Hardening de índices FK y políticas RLS de bancos/remitentes.
+- [ ] Revisar avisos restantes de `SECURITY DEFINER` con diseño RLS antes de cambiar permisos.
+- [ ] Verificar no almacenamiento/transmisión de SMS completo, OTP, PIN o credenciales.
+- [ ] Revisión legal, privacidad, consentimiento y políticas SMS.
 - [ ] APK release firmado.
-- [ ] Aprobación final del propietario antes de habilitar comercios reales.
+- [ ] Aprobación final antes de habilitar comercios reales.
