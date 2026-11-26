@@ -12,12 +12,14 @@ Deno.serve(async req=>{
  const {data:{user},error}=await uc.auth.getUser();if(error||!user)return out(401,{error:"invalid_session"});
  let b:any;try{b=await req.json()}catch{return out(400,{error:"invalid_json"})}
  if(!uuid(b?.deviceId))return out(400,{error:"invalid_device"});
- const {data:device}=await admin.from("pv_devices").select("id,organization_id").eq("id",b.deviceId).maybeSingle();
+ const {data:device}=await admin.from("pv_devices").select("id,organization_id,device_status").eq("id",b.deviceId).maybeSingle();
  if(!device)return out(404,{error:"device_not_found"});
  const {data:member}=await admin.from("pv_organization_members").select("role").eq("organization_id",device.organization_id).eq("user_id",user.id).eq("status","active").in("role",["owner","admin"]).maybeSingle();
  if(!member)return out(403,{error:"forbidden"});
- const {error:updateError}=await admin.from("pv_devices").update({device_status:"revoked",revoked_at:new Date().toISOString()}).eq("id",device.id);
+ if(device.device_status!=="active")return out(409,{error:"device_not_active"});
+ const {data:updated,error:updateError}=await admin.from("pv_devices").update({device_status:"revoked",revoked_at:new Date().toISOString()}).eq("id",device.id).eq("device_status","active").select("id").maybeSingle();
  if(updateError)return out(500,{error:"device_revoke_failed"});
+ if(!updated)return out(409,{error:"device_not_active"});
  await admin.from("pv_audit_logs").insert({organization_id:device.organization_id,user_id:user.id,action:"device_revoked",entity_type:"device",entity_id:device.id});
  return out(200,{ok:true,deviceId:device.id,status:"revoked"});
 });
