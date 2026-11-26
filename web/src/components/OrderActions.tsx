@@ -17,12 +17,14 @@ export default function OrderActions({ organizationId, order, candidates }: {
   async function run(action: "approve" | "reject_match" | "link" | "cancel", confirmText: string) {
     if (!supabase || !window.confirm(confirmText)) return;
     setBusy(true); setMessage("");
-    const { data, error } = await supabase.functions.invoke("order-action", {
-      body: { organizationId, orderId: order.id, action, paymentId: action === "link" ? paymentId : undefined },
-    });
-    setBusy(false);
-    if (error || !data?.ok) { setMessage(error?.message ?? "No se pudo completar la acción."); return; }
-    setMessage("Listo."); router.refresh();
+    try {
+      const { data, error } = await supabase.functions.invoke("order-action", {
+        body: { organizationId, orderId: order.id, action, paymentId: action === "link" ? paymentId : undefined },
+      });
+      if (error || !data?.ok) { setMessage(error?.message ?? "No se pudo completar la acción."); return; }
+      setMessage("Acción completada."); router.refresh();
+    } catch (e) { setMessage(e instanceof Error ? e.message : "No se pudo completar la acción."); }
+    finally { setBusy(false); }
   }
 
   return <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -31,7 +33,7 @@ export default function OrderActions({ organizationId, order, candidates }: {
       <button disabled={busy} onClick={() => void run("reject_match", "¿Este pago NO corresponde a la orden? Quedará libre para otra orden.")}>No es</button>
     </>}
     {(status === "pending" || status === "expired") && candidates.length > 0 && <>
-      <select value={paymentId} onChange={(e) => setPaymentId(e.target.value)} aria-label="Pago a vincular">
+      <select value={paymentId} disabled={busy} onChange={(e) => setPaymentId(e.target.value)} aria-label="Pago a vincular">
         {candidates.map((p) => <option key={p.id} value={p.id}>
           Ref {p.reference} · {formatDate(p.transaction_date)}{p.origin_phone_last4 ? ` · tel …${p.origin_phone_last4}` : ""}
         </option>)}
