@@ -151,19 +151,31 @@ class MainActivity : ComponentActivity() {
                         OutlinedTextField(value=anonKey,onValueChange={anonKey=it},label={Text("Anon / publishable key")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         OutlinedTextField(value=orgId,onValueChange={orgId=it},label={Text("Organization UUID")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         Button(onClick={
-                            val valid=endpoint.startsWith("https://") && anonKey.isNotBlank() && orgId.matches(Regex("(?i)[0-9a-f-]{36}"))
-                            if(valid) {
-                                val previousOrg=SecureConfig.get(this@MainActivity,"organization_id")
-                                if(previousOrg.isNotBlank() && previousOrg!=orgId) {
-                                    SecureConfig.set(this@MainActivity,"device_id","")
-                                    deviceId=""
+                            configMessage="Validando datos..."
+                            try {
+                                val cleanUrl=endpoint.trim().trimEnd('/')
+                                val cleanKey=anonKey.trim()
+                                val cleanOrg=orgId.trim()
+                                val uuidPattern=Regex("(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+                                val valid=cleanUrl.startsWith("https://") && cleanKey.isNotBlank() && uuidPattern.matches(cleanOrg)
+                                if(valid) {
+                                    val previousOrg=SecureConfig.get(this@MainActivity,"organization_id")
+                                    if(previousOrg.isNotBlank() && previousOrg!=cleanOrg) {
+                                        SecureConfig.set(this@MainActivity,"device_id","")
+                                        deviceId=""
+                                    }
+                                    SecureConfig.set(this@MainActivity,"supabase_url",cleanUrl)
+                                    SecureConfig.set(this@MainActivity,"anon_key",cleanKey)
+                                    SecureConfig.set(this@MainActivity,"organization_id",cleanOrg)
+                                    configMessage="Conexión guardada en este teléfono."
+                                } else {
+                                    configMessage="No se guardó: revisa URL HTTPS, anon key y UUID completo."
                                 }
-                                SecureConfig.set(this@MainActivity,"supabase_url",endpoint.trimEnd('/'))
-                                SecureConfig.set(this@MainActivity,"anon_key",anonKey)
-                                SecureConfig.set(this@MainActivity,"organization_id",orgId)
-                                configMessage="Conexión base guardada."
-                            } else configMessage="Revisa URL HTTPS, anon key y UUID de organización."
+                            } catch(e:Exception) {
+                                configMessage="Error al guardar: ${e.message ?: "fallo de almacenamiento"}"
+                            }
                         }) { Text("Guardar conexión") }
+                        Text(configMessage, style=MaterialTheme.typography.bodyMedium)
                         OutlinedTextField(value=email,onValueChange={email=it},label={Text("Correo de acceso")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         Button(onClick={try { SupabaseMobileAuth.requestEmailOtp(this@MainActivity,email); configMessage="Código enviado al correo." } catch(e:Exception) { configMessage=e.message?: "No se pudo solicitar código." }}) { Text("Solicitar código de acceso") }
                         OutlinedTextField(value=otp,onValueChange={otp=it},label={Text("Código de un solo uso")},singleLine=true,modifier=Modifier.fillMaxWidth())
@@ -184,7 +196,6 @@ class MainActivity : ComponentActivity() {
                             configMessage="Sincronización programada. El dispositivo debe estar aprobado."
                         }) { Text("Programar sincronización") }
                         Text("Dispositivo: ${SecureConfig.get(this@MainActivity,"device_id").ifBlank { "No enrolado" }}")
-                        Text(configMessage)
                         Text("No se transmite el texto completo del SMS, OTP, PIN ni credenciales bancarias.")
                     }
                 }
