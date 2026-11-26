@@ -68,6 +68,8 @@ class MainActivity : ComponentActivity() {
                 var authBusy by remember { mutableStateOf(false) }
                 var deviceBusy by remember { mutableStateOf(false) }
                 var syncBusy by remember { mutableStateOf(false) }
+                var connectionBusy by remember { mutableStateOf(false) }
+                var connectionTestMessage by remember { mutableStateOf("") }
                 var statusMessage by remember { mutableStateOf("") }
                 val localEventsFlow = remember { PayVerifyDatabaseProvider.get(this).paymentEventDao().observeAll() }
                 val localEvents by localEventsFlow.collectAsState(initial = emptyList())
@@ -188,7 +190,7 @@ class MainActivity : ComponentActivity() {
                                     SecureConfig.set(this@MainActivity,"supabase_url",cleanUrl)
                                     SecureConfig.set(this@MainActivity,"anon_key",cleanKey)
                                     SecureConfig.set(this@MainActivity,"organization_id",cleanOrg)
-                                    configMessage="Conexión guardada en este teléfono."
+                                    configMessage="Configuración guardada localmente; todavía no se probó la conexión."
                                 } else {
                                     configMessage="No se guardó: revisa URL HTTPS, anon key y UUID completo."
                                 }
@@ -197,6 +199,15 @@ class MainActivity : ComponentActivity() {
                             }
                         }) { Text("Guardar conexión") }
                         Text(configMessage, style=MaterialTheme.typography.bodyMedium)
+                        Button(enabled=!connectionBusy,onClick={
+                            connectionBusy=true; connectionTestMessage="Comprobando conexión con Supabase…"
+                            scope.launch {
+                                try { connectionTestMessage=withContext(Dispatchers.IO) { SupabaseMobileAuth.testConnection(this@MainActivity) } }
+                                catch(e:Exception) { connectionTestMessage=e.message?: "No se pudo comprobar la conexión." }
+                                finally { connectionBusy=false }
+                            }
+                        }) { Text(if(connectionBusy) "Comprobando…" else "Probar conexión") }
+                        if(connectionTestMessage.isNotBlank()) Text(connectionTestMessage)
                         OutlinedTextField(value=email,onValueChange={email=it},label={Text("Correo de acceso")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         Button(enabled=!authBusy,onClick={
                             if(email.trim().isBlank()) authMessage="Escribe el correo de acceso."
