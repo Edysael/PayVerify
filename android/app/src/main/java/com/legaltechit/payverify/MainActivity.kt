@@ -97,7 +97,7 @@ class MainActivity : ComponentActivity() {
                         Divider()
                         Text("Notificaciones de las apps de los bancos", style=MaterialTheme.typography.titleMedium)
                         Text("Muchos bancos avisan por notificación y no por SMS. Concede el acceso a notificaciones y autoriza solo la app del banco donde recibes. Se lee en el teléfono y el texto no se guarda.")
-                        Button(onClick={ startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) { Text("Abrir acceso a notificaciones") }
+                        Button(onClick={ statusMessage="Activa PayVerify en la pantalla de acceso a notificaciones y vuelve para pulsar Actualizar estado."; startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) { Text("Abrir acceso a notificaciones") }
                         Button(onClick={
                             permission=ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
                             val currentSenders=prefs.getStringSet("authorized_senders", emptySet())?.toSet().orEmpty()
@@ -138,8 +138,15 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             Button(onClick={
-                                enabled=!enabled
-                                prefs.edit().putBoolean("capture_enabled",enabled).apply()
+                                if(!listenerEnabled) {
+                                    appMessage="Primero concede el acceso a notificaciones a PayVerify."
+                                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                } else if(appRules.isEmpty()) appMessage="Autoriza primero la app de tu banco."
+                                else {
+                                    enabled=!enabled
+                                    prefs.edit().putBoolean("capture_enabled",enabled).apply()
+                                    appMessage=if(enabled) "Captura de notificaciones activada." else "Captura pausada."
+                                }
                             }) { Text(if(enabled) "Pausar captura" else "Activar captura solo con notificaciones") }
                         }
                         if(unparsed>0) Text("Mensajes de tus bancos que no se pudieron interpretar: $unparsed. Mándame uno (con datos tapados) para agregar su plantilla.")
@@ -211,6 +218,7 @@ class MainActivity : ComponentActivity() {
                                 finally { authBusy=false }
                             }
                         }) { Text(if(authBusy) "Verificando…" else "Verificar código") }
+                        if(authMessage.isNotBlank()) Text(authMessage)
                         OutlinedTextField(value=deviceName,onValueChange={deviceName=it},label={Text("Nombre del dispositivo")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         Button(enabled=!deviceBusy,onClick={
                             if(SecureConfig.get(this@MainActivity,"access_token").isBlank()) deviceMessage="Inicia sesión primero."
