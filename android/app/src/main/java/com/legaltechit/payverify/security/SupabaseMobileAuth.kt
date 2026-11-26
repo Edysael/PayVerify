@@ -25,6 +25,25 @@ object SupabaseMobileAuth {
         } finally { connection.disconnect() }
     }
 
+    fun testConnection(context:Context):String {
+        val base=SecureConfig.get(context,"supabase_url").trimEnd('/')
+        val key=SecureConfig.get(context,"anon_key")
+        require(base.startsWith("https://")&&key.isNotBlank()){"Guarda primero la URL y la publishable key"}
+        val connection=URL("$base/auth/v1/health").openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod="GET"
+            connection.connectTimeout=10000
+            connection.readTimeout=10000
+            connection.setRequestProperty("apikey",key)
+            val code=connection.responseCode
+            val stream=if(code in 200..299) connection.inputStream else connection.errorStream
+            val text=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
+            if(code !in 200..299) throw IllegalStateException("Supabase no respondió correctamente ($code)")
+            val version=JSONObject(text).optString("version").takeIf{it.isNotBlank()}
+            return if(version!=null) "Conexión Supabase verificada (GoTrue $version)." else "Conexión Supabase verificada."
+        } finally { connection.disconnect() }
+    }
+
     fun requestEmailOtp(context:Context,email:String) {
         request(context,"/auth/v1/otp",JSONObject().put("email",email.trim()).put("create_user",false))
     }
