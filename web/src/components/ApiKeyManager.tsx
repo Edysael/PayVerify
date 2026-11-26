@@ -13,20 +13,30 @@ export default function ApiKeyManager({ organizationId, keys }: { organizationId
   const [newKey, setNewKey] = useState("");
 
   async function create() {
-    if (!supabase) return;
+    if (!supabase) { setMessage("Supabase no está configurado."); return; }
     setBusy(true); setMessage(""); setNewKey("");
-    const { data, error } = await supabase.functions.invoke("api-key-create", { body: { organizationId, label } });
-    setBusy(false);
-    if (error || !data?.apiKey) { setMessage(error?.message ?? "No se pudo crear la llave."); return; }
-    setNewKey(data.apiKey); setLabel(""); router.refresh();
+    try {
+      const { data, error } = await supabase.functions.invoke("api-key-create", { body: { organizationId, label: label.trim() } });
+      if (error || !data?.apiKey) { setMessage(error?.message ?? "No se pudo crear la llave."); return; }
+      setNewKey(data.apiKey); setLabel(""); setMessage("Llave creada. Cópiala ahora: solo se muestra una vez."); router.refresh();
+    } catch (e) { setMessage(e instanceof Error ? e.message : "No se pudo crear la llave."); }
+    finally { setBusy(false); }
+  }
+  async function copyKey() {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("El navegador no permite copiar automáticamente. Selecciona y copia la llave.");
+      await navigator.clipboard.writeText(newKey); setMessage("Llave copiada al portapapeles.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "No se pudo copiar la llave."); }
   }
   async function revoke(id: string) {
     if (!supabase || !window.confirm("¿Revocar esta llave? Tu checkout dejará de poder usarla.")) return;
-    setBusy(true);
-    const { error } = await supabase.functions.invoke("api-key-create", { body: { organizationId, revokeKeyId: id } });
-    setBusy(false);
-    if (error) { setMessage(error.message); return; }
-    router.refresh();
+    setBusy(true); setMessage("");
+    try {
+      const { data, error } = await supabase.functions.invoke("api-key-create", { body: { organizationId, revokeKeyId: id } });
+      if (error || data?.ok === false) { setMessage(error?.message ?? "No se pudo revocar la llave."); return; }
+      setMessage("Llave revocada."); router.refresh();
+    } catch (e) { setMessage(e instanceof Error ? e.message : "No se pudo revocar la llave."); }
+    finally { setBusy(false); }
   }
 
   return <section className="panel">
@@ -34,12 +44,12 @@ export default function ApiKeyManager({ organizationId, keys }: { organizationId
     <p className="muted">Con una llave, tu app crea órdenes y consulta si ya se pagaron. Cada llave se muestra una sola vez.</p>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nombre (ej: Checkout tienda)" maxLength={80} />
-      <button disabled={busy || label.trim().length === 0} onClick={() => void create()}>Crear llave</button>
+      <button disabled={busy || label.trim().length === 0 || !supabase} onClick={() => void create()}>{busy?"Procesando…":"Crear llave"}</button>
     </div>
     {newKey && <div className="panel" role="alert">
       <strong>Copia esta llave ahora:</strong>
       <p style={{ wordBreak: "break-all", fontFamily: "monospace" }}>{newKey}</p>
-      <button onClick={() => void navigator.clipboard?.writeText(newKey)}>Copiar</button>
+      <button disabled={busy} onClick={() => void copyKey()}>Copiar</button>
     </div>}
     {message && <p role="status">{message}</p>}
     {keys.length === 0 ? <p>No hay llaves creadas.</p> :
