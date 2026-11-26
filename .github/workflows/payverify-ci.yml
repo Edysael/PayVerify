@@ -50,4 +50,4 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - run: ./supabase/tests/run.sh
+      - run: bash ./supabase/tests/run.sh
