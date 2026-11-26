@@ -16,8 +16,10 @@ Deno.serve(async req=>{
  if(!device)return out(404,{error:"device_not_found"});
  const {data:member}=await admin.from("pv_organization_members").select("role").eq("organization_id",device.organization_id).eq("user_id",user.id).eq("status","active").in("role",["owner","admin"]).maybeSingle();
  if(!member)return out(403,{error:"forbidden"});
- const {error:updateError}=await admin.from("pv_devices").update({device_status:"active",last_seen_at:new Date().toISOString(),revoked_at:null}).eq("id",device.id).eq("device_status","pending");
+ if(device.device_status!=="pending")return out(409,{error:"device_not_pending"});
+ const {data:updated,error:updateError}=await admin.from("pv_devices").update({device_status:"active",last_seen_at:new Date().toISOString(),revoked_at:null}).eq("id",device.id).eq("device_status","pending").select("id").maybeSingle();
  if(updateError)return out(500,{error:"device_approval_failed"});
+ if(!updated)return out(409,{error:"device_not_pending"});
  await admin.from("pv_audit_logs").insert({organization_id:device.organization_id,user_id:user.id,action:"device_approved",entity_type:"device",entity_id:device.id});
  return out(200,{ok:true,deviceId:device.id,status:"active"});
 });
