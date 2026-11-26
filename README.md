@@ -10,10 +10,11 @@ PayVerify es un producto para registrar localmente notificaciones de pago, sincr
 
 ## Estado verificado (26 de noviembre de 2026)
 - Repositorio privado: `Edysael/PayVerify`.
-- CI actual: https://github.com/Edysael/PayVerify/actions/runs/45896340341 — web, Android debug y SQL pasan.
+- CI: https://github.com/Edysael/PayVerify/actions/runs/45896790057 — web, Android debug y SQL pasan.
+- APK debug: artifact `15153483173`.
 - Supabase PayVerify migraciones 0001–0008 aplicadas; 13 Edge Functions activas; cron de expiración cada 5 minutos.
 - Hardening 0008 aplicado: índices FK y políticas RLS de escritura sin SELECT redundante.
-- Panel Vercel producción: https://payverify-nine.vercel.app.
+- Panel Vercel production deployment `READY` desde commit de aplicación `826fba4`; alias https://payverify-nine.vercel.app.
 
 Consulta `docs/ESTADO_ACTUAL_2026-11-26.md` y `docs/PENDIENTES_ED.md` para el estado y los gates de aceptación.
 
@@ -34,4 +35,4 @@ Consulta `docs/ESTADO_ACTUAL_2026-11-26.md` y `docs/PENDIENTES_ED.md` para el es
 - `docs/` arquitectura, seguridad, pruebas y despliegue.
 
 ## Criterio de lanzamiento
-CI verde no equivale a aceptación comercial. Antes de habilitar comercios reales deben completarse checkout, conciliación con cartola y pruebas en teléfono Android físico; luego preparar APK release firmado.
+CI verde y deployment READY no equivalen a aceptación comercial. Antes de habilitar comercios reales deben completarse checkout, conciliación con cartola y pruebas en teléfono Android físico; luego preparar APK release firmado.
