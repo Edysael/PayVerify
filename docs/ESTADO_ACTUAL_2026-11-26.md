@@ -1,41 +1,55 @@
 # Estado actual de PayVerify — 26 de noviembre de 2026
 
-## Verificado directamente
+## Código y CI verificados
 
-- Panel de producción: `https://payverify-nine.vercel.app` responde.
-- Endpoint `/api/health`: HTTP 200 y `environmentConfigured: true`.
-- Proyecto Vercel `payverify`: último deployment de producción `READY`.
-- Supabase `LEGAL TECH-IT API SERVICES` (`fzumtynskvcrybzejmbo`): migraciones PayVerify 0001–0006 registradas; migración 0007 aplicada durante la auditoría.
-- 13 Edge Functions están `ACTIVE`. `order-create`, `order-update` y `order-status` tienen `verify_jwt=false` y usan la llave PayVerify; las funciones de operador requieren sesión.
-- Dos organizaciones PayVerify y dos membresías activas de propietario.
-- Dos llaves API activas pertenecen a la organización `TomaYa`; la segunda organización aún no tiene llave. El panel recibe permiso SELECT solo para metadatos permitidos; `key_hash` no es legible por `authenticated`. El secreto de las llaves no se almacena en texto plano y no se incluye en este paquete.
-- `payverify-expire-orders` está activo con `*/5 * * * *`; la última ejecución registrada fue `succeeded`.
-- `orders_total=0`, `payment_events_total=0` y `statement_lines_total=0` al momento de la auditoría.
-- Los logs muestran dos respuestas `201` de `organization-create` y dos de `api-key-create`. No muestran llamadas a `order-create`, `order-update`, `order-status` ni `payment-event-ingest`.
-- El panel de producción no reportó errores runtime en la ventana revisada.
+- Repositorio privado: https://github.com/Edysael/PayVerify
+- Rama: `main`
+- Commit auditado: `0862eb6065c63858192769bef8658d0728432b29`
+- CI: https://github.com/Edysael/PayVerify/actions/runs/45896340341
+- Resultado: **success** en los tres jobs:
+  - `web`: `npm ci`, pruebas Vitest y `next build`.
+  - `android-apk`: `testDebugUnitTest` y `assembleDebug`.
+  - `sql`: migraciones y pruebas SQL en PostgreSQL 16.
+- El CI genera `payverify-debug-apk`. Es un APK debug, no una versión release firmada.
 
-## Ajuste de seguridad aplicado
+## Supabase de producción
 
-Se aplicó `payverify_0007_revoke_public_trigger_execute`: revoca la ejecución directa por `PUBLIC`, `anon` y `authenticated` de las funciones trigger `payverify_sync_order_on_reconcile()` y `pv_log_payment_status_change()`. Las funciones siguen conectadas a sus triggers. La comprobación posterior confirmó que ya no tienen permiso `PUBLIC`.
+Proyecto `LEGAL TECH-IT API SERVICES` — ref `fzumtynskvcrybzejmbo`.
 
-El Security Advisor aún marca `pv_is_org_member(uuid)` y `pv_can_operate_org(uuid)` como funciones `SECURITY DEFINER` ejecutables por `authenticated`. Es intencional para las políticas RLS: ambas tienen `search_path=public`, usan `auth.uid()` y solo devuelven una comprobación booleana de membresía/rol. No se debe revocar su permiso a `authenticated` sin rediseñar las políticas.
+- Migraciones PayVerify 0001–0008 registradas.
+- 13 Edge Functions en estado `ACTIVE`.
+- `device-approve` y `device-revoke` están en versión 2; el código desplegado coincide con GitHub y ambas requieren JWT.
+- `payverify-expire-orders` está activo con calendario `*/5 * * * *`.
+- Conteos verificados: 2 organizaciones, 2 API keys activas, 0 órdenes, 0 eventos de pago y 0 líneas de extracto.
+
+### Hardening aplicado (0008)
+
+- Se agregaron 19 índices de soporte para claves foráneas de PayVerify.
+- Se reemplazaron las políticas redundantes `*_operator_all` de bancos y remitentes por políticas INSERT/UPDATE/DELETE separadas.
+- Se conservaron las políticas SELECT de miembros y los permisos de escritura de owner/admin/operator.
+- Verificación posterior: 19/19 índices presentes, 0 políticas antiguas y 3 políticas de escritura por cada tabla.
+- El advisor ya no reporta claves foráneas de PayVerify sin índice ni las dos políticas SELECT redundantes.
+- Permanecen dos avisos sobre `pv_is_org_member(uuid)` y `pv_can_operate_org(uuid)` como funciones `SECURITY DEFINER` ejecutables por authenticated. Se usan deliberadamente en RLS para comprobar membresía/rol; no revocar sin rediseñar las políticas.
+- Los avisos de índices no usados son esperables mientras las tablas de PayVerify estén vacías.
+
+## Panel Vercel
+
+- Proyecto: `payverify`.
+- Alias de producción: https://payverify-nine.vercel.app
+- Deployment consultado: `dpl_9B69Ax3xejaLq22pAA1BehPWKfdW`, estado `READY`.
+- No se encontraron errores runtime en los últimos 7 días.
+- El proyecto Vercel no está vinculado automáticamente al repositorio GitHub; el deployment consultado era anterior al commit auditado. Se debe publicar la versión actual desde el repositorio y comprobar que el alias de producción apunte a ella.
 
 ## No certificado todavía
 
-- No se ha completado una orden real desde el checkout hasta la consulta de estado.
-- No hay pagos, eventos ni líneas de extracto en PayVerify.
-- Android no está compilado ni instalado en un teléfono real.
-- No se han configurado plantillas para los formatos reales de los bancos.
-- No se ha probado conciliación con un extracto bancario real.
-- No hay repositorio `PayVerify` visible en las cuentas GitHub conectadas; por eso no se ha ejecutado `PayVerify CI` ni descargado el APK.
+- Prueba de aceptación completa en un teléfono Android físico.
+- Checkout real: crear una orden con API key, consultar estado y actualizar pistas del cliente.
+- Captura y sincronización de una notificación/SMS bancario real autorizado.
+- Importación de cartola CSV de prueba y conciliación/deshacer con un movimiento real anonimizado.
+- Plantillas ajustadas a formatos bancarios reales.
+- Prueba de aislamiento multiempresa y roles contra el entorno de producción.
+- APK release firmado, revisión legal/privacidad y evaluación de las políticas de distribución relacionadas con SMS/notificaciones.
 
-## Próxima secuencia de aceptación
+## Conclusión
 
-1. Crear un repositorio privado `PayVerify` y subir esta carpeta como raíz, conservando `.github/workflows/payverify-ci.yml`.
-2. Ejecutar `Actions → PayVerify CI`; descargar `payverify-debug-apk` solo si el workflow queda verde.
-3. Instalar el APK en un Android de prueba y autorizar las apps bancarias correspondientes.
-4. Crear una orden de prueba con una de las llaves ya creadas, comprobar `order-status`, y hacer un Pago Móvil pequeño de prueba.
-5. Importar un extracto de prueba y verificar que únicamente la conciliación cambia la orden a `paid_confirmed`.
-6. Probar una muestra anonimizada de cada banco para ajustar sus plantillas.
-
-No se modificó TomaYa ni Mensajero Pro durante esta auditoría.
+El código compila y las pruebas automatizadas de web, Android y SQL pasan. Supabase está instalado y el hardening 0008 está aplicado. Sin embargo, PayVerify **no está certificado para producción comercial** hasta completar los flujos de aceptación con checkout, extracto bancario y dispositivo físico. No declarar el producto terminado solo por tener CI verde.
