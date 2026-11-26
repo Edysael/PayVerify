@@ -10,10 +10,15 @@ export default function SignInPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) { setMessage('Configura las variables de Supabase.'); return; }
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
-    setMessage(error ? 'No se pudo enviar el enlace. Verifica Supabase Auth.' : 'Revisa tu correo para iniciar sesión.');
-    setBusy(false);
+    const cleanEmail=email.trim();
+    if(!cleanEmail){setMessage('Escribe tu correo electrónico.');return;}
+    setBusy(true);setMessage('Enviando enlace de acceso…');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email:cleanEmail, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
+      setMessage(error ? 'No se pudo enviar el enlace. Verifica Supabase Auth y el proveedor de correo.' : 'Solicitud aceptada. Revisa tu correo para iniciar sesión.');
+    } catch(e) {
+      setMessage(e instanceof Error?e.message:'No se pudo enviar el enlace de acceso.');
+    } finally { setBusy(false); }
   }
 
   return <main style={{maxWidth:420,margin:'10vh auto',padding:24,background:'white',borderRadius:16}}>
@@ -22,7 +27,7 @@ export default function SignInPage() {
     <form onSubmit={signIn}>
       <label htmlFor="email">Correo electrónico</label>
       <input id="email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} style={{display:'block',width:'100%',padding:12,margin:'12px 0'}} />
-      <button disabled={busy} style={{padding:'12px 18px'}}>{busy?'Enviando…':'Enviar enlace'}</button>
+      <button disabled={busy||!email.trim()} style={{padding:'12px 18px'}}>{busy?'Enviando…':'Enviar enlace'}</button>
     </form>
     <p role="status">{message}</p>
   </main>;
