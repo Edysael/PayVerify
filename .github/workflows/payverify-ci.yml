@@ -1,4 +1,9 @@
 name: PayVerify CI
+
+concurrency:
+  group: payverify-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
