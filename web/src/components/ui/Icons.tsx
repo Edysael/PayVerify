@@ -1,5 +1,5 @@
 // Íconos de trazo (24x24) dibujados a mano para no depender de librerías externas.
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
@@ -45,13 +45,15 @@ export const IconTrash = (p: IconProps) => <Svg {...p}><path d="M4 7h16M9 7V4h6v
 
 /** Marca PayVerify: escudo morado con check. */
 export function LogoMark({ size = 44 }: { size?: number }) {
+  // id único: si hay dos logos (barra móvil oculta + menú), un id repetido deja el escudo sin color.
+  const gid = `pv-logo-${useId().replace(/:/g, "")}`;
   return <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
     <defs>
-      <linearGradient id="pv-logo-g" x1="0" y1="0" x2="1" y2="1">
+      <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stopColor="#a78bfa" /><stop offset="1" stopColor="#6d28d9" />
       </linearGradient>
     </defs>
-    <path d="M24 3c6 4 12 5 18 5v13c0 11-7.5 18.5-18 24C13.5 39.5 6 32 6 21V8c6 0 12-1 18-5Z" fill="url(#pv-logo-g)" />
+    <path d="M24 3c6 4 12 5 18 5v13c0 11-7.5 18.5-18 24C13.5 39.5 6 32 6 21V8c6 0 12-1 18-5Z" fill={`url(#${gid})`} />
     <path d="m14 24 7.5 7.5L42 9" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>;
 }

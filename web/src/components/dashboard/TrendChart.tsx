@@ -1,7 +1,7 @@
 import { niceScale, type TrendPoint } from "../../lib/dashboard";
 
 // Gráfico de líneas en SVG puro (se dibuja en el servidor, sin librerías).
-const W = 760, H = 270, L = 44, R = 14, T = 16, B = 34;
+const W = 760, H = 270, L = 44, R = 26, T = 16, B = 34;
 
 export default function TrendChart({ points }: { points: TrendPoint[] }) {
   const max = Math.max(0, ...points.map((p) => Math.max(p.registered, p.reconciled)));

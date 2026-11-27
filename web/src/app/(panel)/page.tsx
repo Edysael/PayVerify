@@ -110,7 +110,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         <div className="head"><span className="ic"><IconLayers size={28} /></span><div><div className="lbl">Pagos registrados</div><div className="num">{formatInt(total)}</div></div></div>
         <span className="chip">{change === null
           ? <>Sin datos del periodo anterior</>
-          : <>{change >= 0 ? <IconArrowUp size={16} style={{ color: "#4ade80" }} /> : <IconArrowDown size={16} style={{ color: "#fca5a5" }} />}<b>{formatPercent(change, true)}</b>&nbsp;&nbsp;vs. periodo anterior</>}</span>
+          : <><span className="pill">{change >= 0 ? <IconArrowUp size={16} style={{ color: "#4ade80" }} /> : <IconArrowDown size={16} style={{ color: "#fca5a5" }} />}{formatPercent(change, true)}</span>vs. periodo anterior</>}</span>
         <Wave color="rgba(167,139,250,.35)" />
       </div>
       <div className="stat blue">
