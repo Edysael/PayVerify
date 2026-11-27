@@ -56,3 +56,18 @@ Hecho con el conector de Supabase, sin pasar por GitHub (el conector de GitHub q
 - `public.pv_can_operate_org` y `public.pv_is_org_member` son ejecutables por usuarios autenticados vía RPC. Son los helpers de las políticas RLS y solo consultan la membresía del propio usuario, así que el riesgo es bajo.
 - Aviso de contraseñas filtradas desactivado en Auth: PayVerify usa OTP, pero el proyecto es compartido con otras apps.
 - Tablas del esquema `one` y `public.app_settings` con RLS sin políticas, `one.records_set_code` sin `search_path` fijo y `pg_net` en `public`: pertenecen a otras apps, no se tocaron.
+
+## Pendientes resueltos — 2026-11-27 (PRs #4–#8)
+| Pendiente | PR | En producción (Supabase) |
+|---|---|---|
+| Límite de intentos en `order-update` (5 por orden, luego 429) | #4, migración 0010 | Sí: migración aplicada (probada antes en transacción revertida) y `order-update` v3 |
+| Tope de organizaciones por usuario (5, `PAYVERIFY_MAX_ORGS_PER_USER`) | #5 | Sí: `organization-create` v2 |
+| Rechazar dispositivos pendientes; enroll idempotente con máx. 3 pendientes | #6 | Sí: `device-revoke` v3, `device-enroll` v2 |
+| Resolver `POSSIBLE_DUPLICATE` a mano | #7, migración 0011 | Sí: migración aplicada y `payment-duplicate-resolve` v1 (`verify_jwt` = true) |
+| Parser CSV: `;`, más formatos de fecha, crédito/débito | #8 | Solo panel (pendiente de despliegue en Vercel) |
+
+Antes de reemplazar código en producción se comparó con el repo: `payverify_order_set_hints` era idéntica a 0005; `payverify_match_payment` solo difiere en comentarios; las funciones redesplegadas coincidían con el repo anterior a los cambios. PayVerify tenía 0 órdenes, 0 pagos y 0 dispositivos. El asesor de seguridad no reporta hallazgos nuevos de PayVerify.
+
+**Panel web:** el proyecto Vercel `payverify` no despliega desde Git y su directorio raíz es la raíz del repo; un despliegue desde Git falla porque el panel está en `web/`. Para desplegar: `vercel --prod` desde `web/`, o fijar el directorio raíz del proyecto en `web` (y opcionalmente conectar el repo).
+
+**No verificado:** no se llamó a las funciones desplegadas con usuarios reales (sin acceso de red a Supabase desde el entorno de trabajo).
