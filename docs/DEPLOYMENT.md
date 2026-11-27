@@ -60,3 +60,9 @@ Después de build exitoso, despliega a Vercel y configura dominio/HTTPS.
 - [ ] Backup, monitoreo, límites y respuesta a incidentes documentados.
 
 No se considera desplegado hasta que el propietario complete estos pasos y confirme resultados.
+
+
+## Hardening de revisión (PR, no desplegado)
+La rama \`codex/payverify-hardening-2026-11-26\` agrega migración \`0009_payverify_hardening.sql\` y actualiza las funciones de importación, conciliación y órdenes. **No está aplicada en producción.** Ejecuta CI, aplica primero en staging, valida extractos anonimizados y recién después programa la migración y redeploy de funciones.
+La configuración \`supabase/config.toml\` deja \`verify_jwt=false\` únicamente en \`order-create\`, \`order-update\` y \`order-status\`, que aceptan API keys y validan en \`resolveCaller\`; las demás funciones requieren JWT.
+
