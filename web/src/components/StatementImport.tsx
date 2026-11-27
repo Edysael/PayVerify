@@ -39,7 +39,7 @@ export default function StatementImport({ organizationId }: { organizationId:str
   }
   return <section className="panel">
     <h2>Importar extracto CSV</h2>
-    <p className="muted">CSV de movimientos, máximo 2 MB y 5.000 filas. Se requiere Fecha y Monto. Revisa la vista previa antes de importar.</p>
+    <p className="muted">CSV de movimientos separado por coma o punto y coma, máximo 2 MB y 5.000 filas. Se requiere Fecha y Monto (o columnas Crédito/Débito). Fechas: aaaa-mm-dd o dd/mm/aaaa, con hora opcional. Revisa la vista previa antes de importar.</p>
     <input type="file" accept=".csv,text/csv" disabled={busy} onChange={e=>void inspect(e.target.files?.[0]??null)}/>
     {rows.length>0&&<div style={{overflowX:"auto",marginTop:16}}>
       <p><strong>Vista previa ({rows.length} filas válidas)</strong></p>
