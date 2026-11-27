@@ -13,7 +13,7 @@ Deno.serve(async(req)=>{
   const {data:order}=await ctx.admin.from("payverify_orders").select("id").eq("id",b.orderId).eq("organization_id",caller.orgId).maybeSingle();
   if(!order)return out(404,{error:"order_not_found"});
   const {data,error}=await ctx.admin.rpc("payverify_order_action",{p_order_id:b.orderId,p_user_id:caller.userId,p_action:b.action,p_payment_id:b.paymentId??null});
-  if(error){const map:Record<string,number>={forbidden:403,invalid_state:409,amount_mismatch:409,payment_already_linked:409,
+  if(error){const map:Record<string,number>={forbidden:403,invalid_state:409,amount_mismatch:409,currency_mismatch:409,payment_already_linked:409,
     payment_not_linkable:409,bank_account_mismatch:409,bank_account_not_active_or_wrong_org:409,payment_not_found:404,order_not_found:404,payment_required:400};
     const code=Object.keys(map).find(k=>error.message?.includes(k));return out(code?map[code]:500,{error:code??"order_action_failed"});}
   return out(200,{ok:true,order:data});
