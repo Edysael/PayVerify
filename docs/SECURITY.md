@@ -26,3 +26,9 @@
 
 ## Antes de producción
 Threat model, pruebas RLS multiempresa, pentest, revisión de logs, políticas de retención/eliminación, revisión legal y políticas de distribución de permisos SMS. Nunca marcar `BANK_CONFIRMED` basándose en SMS.
+
+
+- La conciliación requiere estado elegible (\`RECEIVED_BY_SERVER\` o \`PENDING_REVIEW\`), misma cuenta bancaria activa y coincidente, monto, moneda, referencia y ventana temporal.
+- \`paid_probable\` es solo pago detectado; \`paid\`/confirmación exige \`paid_confirmed\` tras conciliación con extracto.
+- Los hints de referencia/teléfono se limitan a 10 intentos totales por orden (el contador por ventana no reinicia el límite total).
+- La configuración de Edge Functions mantiene JWT verificado para funciones de usuario; checkout con API key realiza autenticación manual en \`resolveCaller\`.

@@ -1,4 +1,4 @@
-import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.119.2";
 const h={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const out=(s:number,b:unknown)=>new Response(JSON.stringify(b),{status:s,headers:h});
 const uuid=(v:unknown)=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);

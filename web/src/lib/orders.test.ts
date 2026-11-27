@@ -12,9 +12,9 @@ describe("orders helpers", () => {
   });
   it("only offers payments with exactly the same amount", () => {
     const pays = [
-      { id: "a", amount: 10, reference: "1", transaction_date: "", origin_phone_last4: null, origin_bank_code: null, capture_channel: "sms" },
-      { id: "b", amount: 10.01, reference: "2", transaction_date: "", origin_phone_last4: null, origin_bank_code: null, capture_channel: "sms" },
+      { id: "a", amount: 10, reference: "1", transaction_date: "", origin_phone_last4: null, origin_bank_code: null, capture_channel: "sms", bank_account_id: null, verification_status: "RECEIVED_BY_SERVER" },
+      { id: "b", amount: 10.01, reference: "2", transaction_date: "", origin_phone_last4: null, origin_bank_code: null, capture_channel: "sms", bank_account_id: null, verification_status: "RECEIVED_BY_SERVER" },
     ];
-    expect(candidatePayments({ amount: 10 }, pays).map((p) => p.id)).toEqual(["a"]);
+    expect(candidatePayments({ amount: 10, bank_account_id: null }, pays).map((p) => p.id)).toEqual(["a"]);
   });
 });

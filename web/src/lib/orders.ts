@@ -11,6 +11,7 @@ export type OrderRow = {
   created_at: string;
   match_method: string | null;
   matched_payment_event_id: string | null;
+  bank_account_id: string | null;
   customer_phone_last4: string | null;
   expected_reference_tail: string | null;
 };
@@ -23,6 +24,8 @@ export type UnmatchedPayment = {
   origin_phone_last4: string | null;
   origin_bank_code: string | null;
   capture_channel: string;
+  bank_account_id: string | null;
+  verification_status: string;
 };
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -48,6 +51,10 @@ export function effectiveStatus(o: Pick<OrderRow, "status" | "expires_at">, now 
 }
 
 /** Payments still unlinked whose amount equals the order amount (candidates for a manual link). */
-export function candidatePayments(order: Pick<OrderRow, "amount">, payments: UnmatchedPayment[]): UnmatchedPayment[] {
-  return payments.filter((p) => Number(p.amount) === Number(order.amount));
+export function candidatePayments(order: Pick<OrderRow, "amount" | "bank_account_id">, payments: UnmatchedPayment[]): UnmatchedPayment[] {
+  return payments.filter((p) =>
+    Number(p.amount) === Number(order.amount) &&
+    (!order.bank_account_id || p.bank_account_id === order.bank_account_id) &&
+    ["RECEIVED_BY_SERVER", "PENDING_REVIEW", "RECONCILED"].includes(p.verification_status)
+  );
 }

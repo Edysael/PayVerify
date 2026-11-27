@@ -3,11 +3,11 @@ package com.legaltechit.payverify.sms
 import android.content.Context
 
 class SmsCaptureSettings(context: Context) {
-    private val prefs = context.getSharedPreferences("payverify_capture", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("payverify", Context.MODE_PRIVATE)
 
     var enabled: Boolean
-        get() = prefs.getBoolean("enabled", false)
-        set(value) { prefs.edit().putBoolean("enabled", value).apply() }
+        get() = prefs.getBoolean("capture_enabled", false)
+        set(value) { prefs.edit().putBoolean("capture_enabled", value).apply() }
 
     fun authorizedSenders(): Set<String> =
         prefs.getStringSet("authorized_senders", emptySet())?.toSet() ?: emptySet()

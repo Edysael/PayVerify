@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -91,24 +91,33 @@ Deno.serve(async (req) => {
     .select("id,bank_account_id").eq("organization_id", body.organizationId)
     .eq("sender_identifier", body.senderIdentifier).eq("enabled", true).maybeSingle();
   if (!senderRule) return reply(425, { error: "sender_not_configured_or_disabled" });
+  const senderBankAccountId = senderRule.bank_account_id as string | null;
+  if (senderBankAccountId) {
+    const { data: bankAccount } = await admin.from("pv_bank_accounts").select("id,currency,status")
+      .eq("id", senderBankAccountId).eq("organization_id", body.organizationId).maybeSingle();
+    if (!bankAccount || bankAccount.status !== "active") return reply(425, { error: "sender_bank_account_inactive" });
+    if (bankAccount.currency !== "VES") return reply(409, { error: "sender_bank_account_currency_unsupported" });
+  }
 
   // Never accept or store raw SMS text, sender message body, OTP, PIN, or bank credentials.
   const amount = (body.amountMinorUnits as number) / 100;
 
   // Same payment announced through another channel (SMS + app notification): keep it, flag it, never match it.
   const windowMs = 48 * 60 * 60 * 1000;
-  const { data: twin } = await admin.from("pv_payment_events").select("id")
+  let twinQuery = admin.from("pv_payment_events").select("id")
     .eq("organization_id", body.organizationId).eq("amount", amount)
     .eq("reference", (body.reference as string).trim())
     .gte("transaction_date", new Date((body.transactionTimeMillis as number) - windowMs).toISOString())
     .lte("transaction_date", new Date((body.transactionTimeMillis as number) + windowMs).toISOString())
-    .neq("idempotency_key", body.idempotencyKey).limit(1).maybeSingle();
+    .neq("idempotency_key", body.idempotencyKey);
+  twinQuery = senderBankAccountId ? twinQuery.eq("bank_account_id", senderBankAccountId) : twinQuery.is("bank_account_id", null);
+  const { data: twin } = await twinQuery.limit(1).maybeSingle();
   const { data: inserted, error: insertError } = await admin.from("pv_payment_events")
     .insert({
       id: body.eventId,
       organization_id: body.organizationId,
       device_id: body.deviceId,
-      bank_account_id: senderRule.bank_account_id,
+      bank_account_id: senderBankAccountId,
       amount,
       currency: "VES",
       reference: body.reference.trim(),
@@ -124,9 +133,27 @@ Deno.serve(async (req) => {
     }).select("id,verification_status").maybeSingle();
 
   if (insertError?.code === "23505") {
-    const { data: existing } = await admin.from("pv_payment_events").select("id,verification_status")
+    const { data: existing } = await admin.from("pv_payment_events").select("id,verification_status,bank_account_id,matched_order_id")
       .eq("organization_id", body.organizationId).eq("idempotency_key", body.idempotencyKey).maybeSingle();
-    if (existing) return reply(200, { accepted: true, duplicate: true, eventId: existing.id, status: existing.verification_status });
+    if (existing) {
+      // If the merchant linked this sender after the event was first received,
+      // safely backfill its account when it does not conflict with a linked order.
+      if (!existing.bank_account_id && senderBankAccountId && ["RECEIVED_BY_SERVER","PENDING_REVIEW"].includes(existing.verification_status)) {
+        let accountCompatible = true;
+        if (existing.matched_order_id) {
+          const { data: linkedOrder } = await admin.from("payverify_orders").select("bank_account_id")
+            .eq("id", existing.matched_order_id).maybeSingle();
+          accountCompatible = !linkedOrder?.bank_account_id || linkedOrder.bank_account_id === senderBankAccountId;
+        }
+        if (accountCompatible) {
+          const { error: backfillError } = await admin.from("pv_payment_events").update({ bank_account_id: senderBankAccountId })
+            .eq("id", existing.id).is("bank_account_id", null).in("verification_status", ["RECEIVED_BY_SERVER","PENDING_REVIEW"]);
+          if (backfillError) return reply(500, { error: "duplicate_account_backfill_failed" });
+          if (!existing.matched_order_id) await admin.rpc("payverify_match_payment", { p_payment_id: existing.id });
+        }
+      }
+      return reply(200, { accepted: true, duplicate: true, eventId: existing.id, status: existing.verification_status });
+    }
   }
   if (insertError || !inserted) return reply(500, { error: "event_persistence_failed" });
   await admin.from("pv_devices").update({ last_seen_at: new Date().toISOString() }).eq("id", body.deviceId);
