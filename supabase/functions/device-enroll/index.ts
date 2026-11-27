@@ -12,7 +12,7 @@ Deno.serve(async req=>{
  const {data:{user},error}=await uc.auth.getUser();if(error||!user)return out(401,{error:"invalid_session"});
  let b:any;try{b=await req.json()}catch{return out(400,{error:"invalid_json"})}
  if(!uuid(b?.organizationId)||typeof b?.deviceName!=="string"||b.deviceName.trim().length<1||b.deviceName.length>100)return out(400,{error:"invalid_payload"});
- const {data:member}=await admin.from("pv_organization_members").select("id").eq("organization_id",b.organizationId).eq("user_id",user.id).eq("status","active").maybeSingle();
+ const {data:member}=await admin.from("pv_organization_members").select("id").eq("organization_id",b.organizationId).eq("user_id",user.id).eq("status","active").in("role",["owner","admin","operator"]).maybeSingle();
  if(!member)return out(403,{error:"forbidden"});
  const {data:device,error:deviceErr}=await admin.from("pv_devices").insert({organization_id:b.organizationId,user_id:user.id,device_name:b.deviceName.trim(),platform:"android",device_status:"pending"}).select("id,device_status").single();
  if(deviceErr||!device)return out(500,{error:"device_enroll_failed"});
