@@ -27,3 +27,10 @@ for t in fn-*.test.mjs; do
   cp "$t" "$tmp/"
   node --experimental-strip-types "$tmp/$t"
 done
+
+# 4) reader-status (usa _shared/auth.ts: se sustituye por un stub propio)
+mkdir -p "$tmp/rs/functions/_shared" "$tmp/rs/functions/reader-status"
+cp auth-stub-reader.ts "$tmp/rs/functions/_shared/auth.ts"
+cp ../../functions/reader-status/index.ts "$tmp/rs/functions/reader-status/index.ts"
+cp reader-status.test.mjs "$tmp/rs/"
+node --experimental-strip-types "$tmp/rs/reader-status.test.mjs"
