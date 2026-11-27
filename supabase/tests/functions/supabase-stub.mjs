@@ -44,4 +44,6 @@ class Q{
   single(){const r=this.run();return Promise.resolve({data:r.data?.[0]??null,error:r.error})}
   then(res,rej){return Promise.resolve(this.run()).then(res,rej)}
 }
-export const createClient=()=>({auth:{getUser:async()=>({data:{user:{id:'u1'}},error:null})},from:t=>new Q(t)});
+// rpc: las pruebas definen globalThis.__rpc(fn,args) para simular la respuesta.
+export const createClient=()=>({auth:{getUser:async()=>({data:{user:{id:'u1'}},error:null})},from:t=>new Q(t),
+  rpc:async(fn,args)=>globalThis.__rpc?globalThis.__rpc(fn,args):{data:null,error:{message:'rpc_not_stubbed'}}});

@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.payment-unreconcile]
 verify_jwt = true
+
+[functions.payment-duplicate-resolve]
+verify_jwt = true
