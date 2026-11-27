@@ -1,7 +1,7 @@
 # Despliegue PayVerify — staging primero
 
 > **Estado actual:** PayVerify ya está desplegado en `LEGAL TECH-IT API SERVICES` con objetos `pv_*`/`payverify_*`, 13 Edge Functions y panel en Vercel. Esta guía describe un despliegue nuevo de staging; no vuelvas a aplicar estas migraciones en producción ni crees otro proyecto para la instalación actual. Consulta `ESTADO_ACTUAL_2026-11-26.md`.
-> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. Las migraciones 0010 y 0011 y las funciones `order-*`, `organization-create`, `device-enroll`, `device-revoke` y `payment-duplicate-resolve` también están en producción (2026-11-27, PRs #3–#8). El panel web en Vercel **sigue en el commit `826fba4`**: los cambios de panel de los PRs #3–#8 aún no están desplegados.
+> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. Las migraciones 0010 y 0011 y las funciones `order-*`, `organization-create`, `device-enroll`, `device-revoke` y `payment-duplicate-resolve` también están en producción (2026-11-27, PRs #3–#8). El panel web está desplegado en Vercel desde `main` (`d5c0da4`, 2026-11-27). El proyecto Vercel tiene el directorio raíz en `web`: despliega desde la raíz del repo, no desde `web/`.
 
 ## 0. Separación
 Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistema contable ni APIs ajenas. No pongas la service role key en Next.js público ni en Android.
