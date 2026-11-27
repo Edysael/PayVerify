@@ -11,6 +11,12 @@ Deno.serve(async req=>{
  const {data:{user},error}=await userClient.auth.getUser();if(error||!user)return out(401,{error:"invalid_session"});
  let b:any;try{b=await req.json()}catch{return out(400,{error:"invalid_json"})}
  if(typeof b?.name!=="string"||b.name.trim().length<2||b.name.trim().length>160)return out(400,{error:"invalid_name"});
+ // Tope de organizaciones por usuario (el proyecto Supabase es compartido): por defecto 5, ajustable con PAYVERIFY_MAX_ORGS_PER_USER.
+ const maxOrgs=Math.max(1,Number.parseInt(Deno.env.get("PAYVERIFY_MAX_ORGS_PER_USER")??"",10)||5);
+ const {data:owned,error:ownedErr}=await admin.from("pv_organization_members").select("organization_id")
+  .eq("user_id",user.id).eq("role","owner").limit(maxOrgs);
+ if(ownedErr)return out(500,{error:"organization_create_failed"});
+ if((owned?.length??0)>=maxOrgs)return out(409,{error:"organization_limit_reached",limit:maxOrgs});
  const {data:org,error:orgErr}=await admin.from("pv_organizations").insert({name:b.name.trim()}).select("id,name").single();
  if(orgErr||!org)return out(500,{error:"organization_create_failed"});
  const {error:memberErr}=await admin.from("pv_organization_members").insert({organization_id:org.id,user_id:user.id,role:"owner",status:"active"});

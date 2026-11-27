@@ -18,3 +18,12 @@ for fn in order-create order-status order-update; do
   mkdir -p "$tmp/functions/$fn"; cp "../../functions/$fn/index.ts" "$tmp/functions/$fn/index.ts"
   node --experimental-strip-types "$tmp/null-body.test.mjs" "$fn"
 done
+
+# 3) Pruebas fn-<función>.test.mjs: cada una importa ./<función>.ts (la función con supabase-js simulado).
+for t in fn-*.test.mjs; do
+  [ -e "$t" ] || continue
+  fn=${t#fn-}; fn=${fn%.test.mjs}
+  sed -E 's#https://esm.sh/@supabase/supabase-js@[0-9.]+#./supabase-stub.mjs#' "../../functions/$fn/index.ts" > "$tmp/$fn.ts"
+  cp "$t" "$tmp/"
+  node --experimental-strip-types "$tmp/$t"
+done
