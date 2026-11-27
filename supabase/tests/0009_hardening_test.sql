@@ -58,6 +58,27 @@ begin
   r:=payverify_match_payment(p2);
   select status into st from payverify_orders where id=o3;
   assert r->>'method'='reference' and st='paid_confirmed','reconciled-before-match '||r::text||st;
+
+  -- A reference hint on an already reconciled amount-only match must confirm, not downgrade.
+  insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
+    values(org,a1,dev,30.00,'883344',t,'h4','RECONCILED') returning id into p2;
+  insert into payverify_orders(organization_id,bank_account_id,external_ref,amount,status,matched_payment_event_id,match_method,expires_at,created_at)
+    values(org,a1,'H-4',30.00,'needs_review',p2,'amount_only',t+interval '30 min',t-interval '1 min') returning id into o3;
+  update pv_payment_events set matched_order_id=o3 where id=p2;
+  r:=payverify_order_set_hints(o3,null,'3344');
+  select status into st from payverify_orders where id=o3;
+  assert st='paid_confirmed' and r->>'match_method'='reference','reconciled hint must confirm '||r::text;
+
+  -- Approving a previously reconciled review match must also preserve confirmed status.
+  insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
+    values(org,a1,dev,31.00,'883355',t,'h5','RECONCILED') returning id into p2;
+  insert into payverify_orders(organization_id,bank_account_id,external_ref,amount,status,matched_payment_event_id,match_method,expires_at,created_at)
+    values(org,a1,'H-5',31.00,'needs_review',p2,'amount_only',t+interval '30 min',t-interval '1 min') returning id into o3;
+  update pv_payment_events set matched_order_id=o3 where id=p2;
+  r:=payverify_order_action(o3,usr,'approve');
+  select status into st from payverify_orders where id=o3;
+  assert st='paid_confirmed' and r->>'status'='paid_confirmed','reconciled approval must confirm';
+
   assert not has_table_privilege('anon','public.payverify_order_hint_attempts','select'),'anon can read hint counters';
   assert not has_function_privilege('authenticated','public.payverify_order_hint_rate_limit(uuid,integer,integer)','execute'),'authenticated can call limiter directly';
   raise notice 'PayVerify 0009 hardening tests passed';
