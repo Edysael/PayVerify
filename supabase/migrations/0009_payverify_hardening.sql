@@ -118,7 +118,10 @@ begin
         and pba.organization_id=pay.organization_id and pba.status='active' and pba.currency=pay.currency))
     order by o.created_at for update of o
   loop
-    if cand.expected_reference_tail is not null and right(upper(pay.reference),length(cand.expected_reference_tail)) <> cand.expected_reference_tail then continue; end if;
+    if cand.expected_reference_tail is not null and (
+      pay.reference is null
+      or right(upper(trim(pay.reference)),length(trim(cand.expected_reference_tail))) <> upper(trim(cand.expected_reference_tail))
+    ) then continue; end if;
     allc:=allc||cand.id;
     if cand.expected_reference_tail is not null then strong:=strong||cand.id; end if;
     if cand.customer_phone_last4 is not null and pay.origin_phone_last4 is not null and cand.customer_phone_last4=pay.origin_phone_last4 then by_phone:=by_phone||cand.id; end if;
