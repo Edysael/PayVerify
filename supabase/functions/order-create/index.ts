@@ -26,8 +26,11 @@ Deno.serve(async(req)=>{
     customer_phone_last4:phone,expected_reference_tail:tail,expires_at:new Date(Date.now()+minutes*60_000).toISOString(),created_by:caller.userId};
   const {data,error}=await ctx.admin.from("payverify_orders").insert(row).select("id,external_ref,status,expires_at,amount").maybeSingle();
   if(error?.code==="23505"){
-    const {data:existing}=await ctx.admin.from("payverify_orders").select("id,external_ref,status,expires_at,amount").eq("organization_id",caller.orgId).eq("external_ref",b.externalRef).maybeSingle();
+    const {data:existing}=await ctx.admin.from("payverify_orders").select("id,external_ref,status,expires_at,amount,bank_account_id,customer_phone_last4,expected_reference_tail").eq("organization_id",caller.orgId).eq("external_ref",b.externalRef).maybeSingle();
     if(existing&&Number(existing.amount)!==amount)return out(409,{error:"external_ref_amount_conflict"});
+    if(existing&&b.bankAccountId&&existing.bank_account_id!==b.bankAccountId)return out(409,{error:"external_ref_account_conflict"});
+    if(existing&&phone&&existing.customer_phone_last4!==phone)return out(409,{error:"external_ref_phone_hint_conflict"});
+    if(existing&&tail&&existing.expected_reference_tail!==tail)return out(409,{error:"external_ref_reference_hint_conflict"});
     if(existing)return out(200,{orderId:existing.id,externalRef:existing.external_ref,status:existing.status,expiresAt:existing.expires_at,duplicate:true});
   }
   if(error||!data)return out(500,{error:"order_create_failed"});
