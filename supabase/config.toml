@@ -1,0 +1,46 @@
+# Configuración de Edge Functions de PayVerify para `supabase functions deploy`.
+# Refleja lo verificado en producción el 2026-11-27 (ver docs/AUDITORIA_2026-11-26.md).
+# order-create, order-status y order-update se autentican con el header x-payverify-key
+# (API key del comercio), no con un JWT de sesión: por eso verify_jwt = false.
+# Todas las demás exigen el JWT del usuario.
+
+project_id = "payverify"
+
+[functions.order-create]
+verify_jwt = false
+
+[functions.order-status]
+verify_jwt = false
+
+[functions.order-update]
+verify_jwt = false
+
+[functions.order-action]
+verify_jwt = true
+
+[functions.api-key-create]
+verify_jwt = true
+
+[functions.organization-create]
+verify_jwt = true
+
+[functions.device-enroll]
+verify_jwt = true
+
+[functions.device-approve]
+verify_jwt = true
+
+[functions.device-revoke]
+verify_jwt = true
+
+[functions.payment-event-ingest]
+verify_jwt = true
+
+[functions.statement-import]
+verify_jwt = true
+
+[functions.payment-reconcile]
+verify_jwt = true
+
+[functions.payment-unreconcile]
+verify_jwt = true

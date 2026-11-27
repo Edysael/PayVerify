@@ -1,4 +1,4 @@
-import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const h={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const out=(s:number,b:unknown)=>new Response(JSON.stringify(b),{status:s,headers:h});
 Deno.serve(async req=>{
