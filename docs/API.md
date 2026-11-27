@@ -23,7 +23,7 @@ No enviar: `sms_body`, `message_body`, OTP, PIN, contraseña, token bancario o n
 El backend verifica usuario, membresía, dispositivo activo, remitente habilitado, moneda, monto y clave de idempotencia.
 
 ## Conciliación
-La función de candidato solo propone coincidencias. La RPC comprueba organización, rol, monto, moneda, referencia y tolerancia temporal; actualiza el evento, línea, registro de conciliación y auditoría en una transacción.
+La función de candidato solo propone coincidencias. La RPC comprueba organización, rol, monto, moneda, referencia, cuenta bancaria activa y tolerancia temporal; actualiza el evento, línea, registro de conciliación y auditoría en una transacción. `paid_confirmed` significa que un operador autorizado conciliò el movimiento contra el extracto aportado; no es una verificación directa del banco ni una confirmación de API bancaria.
 
 
 ## Órdenes y confirmación
