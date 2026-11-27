@@ -1,7 +1,7 @@
 # Despliegue PayVerify — staging primero
 
 > **Estado actual:** PayVerify ya está desplegado en `LEGAL TECH-IT API SERVICES` con objetos `pv_*`/`payverify_*`, 13 Edge Functions y panel en Vercel. Esta guía describe un despliegue nuevo de staging; no vuelvas a aplicar estas migraciones en producción ni crees otro proyecto para la instalación actual. Consulta `ESTADO_ACTUAL_2026-11-26.md`.
-> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. El resto del paquete (CI, `next.config.ts`, scripts) aún no está en el repo.
+> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. El resto del paquete (CI, `next.config.ts`, pruebas, `supabase/config.toml`) está en el repo desde el PR #3; las funciones `order-*` con la guarda de cuerpo `null` aún no se redesplegaron.
 
 ## 0. Separación
 Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistema contable ni APIs ajenas. No pongas la service role key en Next.js público ni en Android.
@@ -34,7 +34,7 @@ Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistem
    - `order-update`
    - `order-action`
 5. Configura secrets de Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Supabase normalmente los provee al runtime; nunca los copies a cliente).
-6. `order-create`, `order-status` y `order-update` se autentican con el header `x-payverify-key` (API key del comercio) y no con un JWT de sesión. En el proyecto actual (verificado el 2026-11-27) esas tres tienen `verify_jwt = false` y el resto `true`; el repo no lo define (no hay `supabase/config.toml`), así que hay que fijarlo al desplegar.
+6. `order-create`, `order-status` y `order-update` se autentican con el header `x-payverify-key` (API key del comercio) y no con un JWT de sesión. En el proyecto actual (verificado el 2026-11-27) esas tres tienen `verify_jwt = false` y el resto `true`; `supabase/config.toml` lo define para `supabase functions deploy`.
 7. El vencimiento de órdenes (`payverify_expire_orders`) debe ejecutarse periódicamente (el README indica cada 5 minutos). Ese cron **no está en las migraciones**; en el proyecto actual ya existe el job `payverify-expire-orders` (`*/5 * * * *`). Antes de crear uno en otro proyecto, revisa `select * from cron.job;`.
 8. En Auth, configura proveedor Email OTP, SMTP adecuado y URLs de redirección para el dominio del panel.
 
