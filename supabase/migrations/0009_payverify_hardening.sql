@@ -171,6 +171,7 @@ begin
     if not found or pay.organization_id<>o.organization_id then raise exception 'payment_not_found'; end if;
     if pay.matched_order_id is not null and pay.matched_order_id<>o.id then raise exception 'payment_already_linked'; end if;
     if pay.amount<>o.amount then raise exception 'amount_mismatch'; end if;
+    if pay.currency<>o.currency then raise exception 'currency_mismatch'; end if;
     if pay.verification_status not in ('RECEIVED_BY_SERVER','PENDING_REVIEW','RECONCILED') then raise exception 'payment_not_linkable'; end if;
     if o.bank_account_id is not null and pay.bank_account_id is distinct from o.bank_account_id then raise exception 'bank_account_mismatch'; end if;
     if pay.bank_account_id is not null and not exists(select 1 from public.pv_bank_accounts ba where ba.id=pay.bank_account_id
