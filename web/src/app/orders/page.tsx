@@ -19,10 +19,10 @@ export default async function OrdersPage() {
 
   const [ordersRes, unmatchedRes] = await Promise.all([
     supabase.from("payverify_orders")
-      .select("id,external_ref,description,amount,currency,status,expires_at,created_at,match_method,matched_payment_event_id,customer_phone_last4,expected_reference_tail")
+      .select("id,external_ref,description,amount,currency,status,expires_at,created_at,match_method,matched_payment_event_id,bank_account_id,customer_phone_last4,expected_reference_tail")
       .eq("organization_id", activeId).order("created_at", { ascending: false }).limit(100),
     supabase.from("pv_payment_events")
-      .select("id,amount,reference,transaction_date,origin_phone_last4,origin_bank_code,capture_channel")
+      .select("id,amount,reference,transaction_date,origin_phone_last4,origin_bank_code,capture_channel,bank_account_id,verification_status")
       .eq("organization_id", activeId).is("matched_order_id", null)
       .in("verification_status", ["RECEIVED_BY_SERVER", "PENDING_REVIEW", "RECONCILED"])
       .order("transaction_date", { ascending: false }).limit(50),
