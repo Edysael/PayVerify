@@ -10,5 +10,6 @@ Deno.serve(async(req)=>{
   const {data:o}=await ctx.admin.from("payverify_orders").select("external_ref,status,amount,expires_at").eq("organization_id",caller.orgId).eq("external_ref",b.externalRef).maybeSingle();
   if(!o)return out(404,{error:"order_not_found"});
   const expired=o.status==="pending"&&new Date(o.expires_at).getTime()<Date.now(),status=expired?"expired":o.status;
-  return out(200,{externalRef:o.external_ref,status,paid:status==="paid_probable"||status==="paid_confirmed",expiresAt:o.expires_at});
+  const paymentDetected=status==="paid_probable"||status==="paid_confirmed";
+  return out(200,{externalRef:o.external_ref,status,paid:status==="paid_confirmed",paymentDetected,expiresAt:o.expires_at});
 });
