@@ -2,33 +2,100 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
+type Mode = 'login' | 'signup' | 'forgot';
+
+const MIN_PASSWORD = 8;
+
+function translateError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login credentials')) return 'Correo o contraseña incorrectos.';
+  if (m.includes('email not confirmed')) return 'Tu correo aún no está confirmado. Revisa el correo de confirmación que te enviamos.';
+  if (m.includes('already registered') || m.includes('already been registered')) return 'Ese correo ya tiene cuenta. Inicia sesión o recupera tu contraseña.';
+  if (m.includes('password should be') || m.includes('weak password')) return `La contraseña es muy débil. Usa al menos ${MIN_PASSWORD} caracteres.`;
+  if (m.includes('rate limit') || m.includes('too many')) return 'Demasiados intentos. Espera unos minutos y vuelve a intentar.';
+  return message;
+}
+
+const input: React.CSSProperties = { display: 'block', width: '100%', padding: 12, margin: '6px 0 14px', border: '1px solid #cbd5e1', borderRadius: 8 };
+const primary: React.CSSProperties = { width: '100%', padding: '12px 18px', background: '#111b2c', color: 'white', border: 0, borderRadius: 8 };
+const link: React.CSSProperties = { background: 'none', border: 0, padding: 0, color: '#2557c7', textDecoration: 'underline' };
+
 export default function SignInPage() {
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
 
-  async function signIn(e: React.FormEvent) {
+  function switchMode(next: Mode) { setMode(next); setMessage(''); setPassword(''); setConfirm(''); }
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) { setMessage('Configura las variables de Supabase.'); return; }
-    const cleanEmail=email.trim();
-    if(!cleanEmail){setMessage('Escribe tu correo electrónico.');return;}
-    setBusy(true);setMessage('Enviando enlace de acceso…');
+    const cleanEmail = email.trim();
+    if (!cleanEmail) { setMessage('Escribe tu correo electrónico.'); return; }
+
+    if (mode !== 'forgot') {
+      if (password.length < MIN_PASSWORD) { setMessage(`La contraseña debe tener al menos ${MIN_PASSWORD} caracteres.`); return; }
+      if (mode === 'signup' && password !== confirm) { setMessage('Las contraseñas no coinciden.'); return; }
+    }
+
+    setBusy(true); setMessage('');
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email:cleanEmail, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
-      setMessage(error ? 'No se pudo enviar el enlace. Verifica Supabase Auth y el proveedor de correo.' : 'Solicitud aceptada. Revisa tu correo para iniciar sesión.');
-    } catch(e) {
-      setMessage(e instanceof Error?e.message:'No se pudo enviar el enlace de acceso.');
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+        if (error) { setMessage(translateError(error.message)); return; }
+        // Navegación completa: el servidor lee la sesión nueva y el navegador ofrece guardar la contraseña.
+        window.location.assign('/');
+      } else if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail, password,
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        });
+        if (error) { setMessage(translateError(error.message)); return; }
+        if (data.session) { window.location.assign('/'); return; }
+        setMessage('Cuenta creada. Te enviamos un correo para confirmarla (solo esta vez). Después entrarás siempre con tu contraseña.');
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+        });
+        if (error) { setMessage(translateError(error.message)); return; }
+        setMessage('Si el correo tiene cuenta, te llegará un enlace para crear una contraseña nueva.');
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'No se pudo completar la operación.');
     } finally { setBusy(false); }
   }
 
-  return <main style={{maxWidth:420,margin:'10vh auto',padding:24,background:'white',borderRadius:16}}>
-    <h1>Acceso a PayVerify</h1>
-    <p>Inicia sesión con un enlace seguro enviado a tu correo.</p>
-    <form onSubmit={signIn}>
+  const title = mode === 'login' ? 'Acceso a PayVerify' : mode === 'signup' ? 'Crear cuenta' : 'Recuperar contraseña';
+  const action = mode === 'login' ? 'Iniciar sesión' : mode === 'signup' ? 'Crear cuenta' : 'Enviar enlace de recuperación';
+
+  return <main style={{ maxWidth: 420, margin: '10vh auto', padding: 24, background: 'white', borderRadius: 16 }}>
+    <h1>{title}</h1>
+    {mode === 'forgot' && <p className="muted">Te enviaremos un enlace para crear una contraseña nueva.</p>}
+    <form onSubmit={onSubmit} method="post" action="#">
       <label htmlFor="email">Correo electrónico</label>
-      <input id="email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} style={{display:'block',width:'100%',padding:12,margin:'12px 0'}} />
-      <button disabled={busy||!email.trim()} style={{padding:'12px 18px'}}>{busy?'Enviando…':'Enviar enlace'}</button>
+      <input id="email" name="email" type="email" autoComplete={mode === 'signup' ? 'email' : 'username'} required
+        value={email} onChange={e => setEmail(e.target.value)} style={input} />
+      {mode !== 'forgot' && <>
+        <label htmlFor="password">Contraseña</label>
+        <input id="password" name="password" type="password" required minLength={MIN_PASSWORD}
+          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+          value={password} onChange={e => setPassword(e.target.value)} style={input} />
+      </>}
+      {mode === 'signup' && <>
+        <label htmlFor="confirm">Repite la contraseña</label>
+        <input id="confirm" name="confirm" type="password" required minLength={MIN_PASSWORD} autoComplete="new-password"
+          value={confirm} onChange={e => setConfirm(e.target.value)} style={input} />
+      </>}
+      <button type="submit" disabled={busy} style={primary}>{busy ? 'Procesando…' : action}</button>
     </form>
-    <p role="status">{message}</p>
+    <p role="status" style={{ minHeight: 24 }}>{message}</p>
+    <p className="muted" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+      {mode !== 'login' && <button type="button" style={link} onClick={() => switchMode('login')}>Ya tengo cuenta</button>}
+      {mode !== 'signup' && <button type="button" style={link} onClick={() => switchMode('signup')}>Crear cuenta</button>}
+      {mode !== 'forgot' && <button type="button" style={link} onClick={() => switchMode('forgot')}>Olvidé mi contraseña</button>}
+    </p>
   </main>;
 }
