@@ -32,7 +32,7 @@ class Q{
       }
       return {data:out,error:null};
     }
-    if(this.op==='update'){rows.filter(r=>this.match(r)).forEach(r=>Object.assign(r,this.vals));return {data:null,error:null};}
+    if(this.op==='update'){const hit=rows.filter(r=>this.match(r));hit.forEach(r=>Object.assign(r,this.vals));return {data:this.ret?hit:null,error:null};}
     if(this.op==='delete'){
       const gone=rows.filter(r=>this.match(r));
       db[this.t]=rows.filter(r=>!gone.includes(r));

@@ -16,10 +16,13 @@ Deno.serve(async req=>{
  if(!device)return out(404,{error:"device_not_found"});
  const {data:member}=await admin.from("pv_organization_members").select("role").eq("organization_id",device.organization_id).eq("user_id",user.id).eq("status","active").in("role",["owner","admin"]).maybeSingle();
  if(!member)return out(403,{error:"forbidden"});
- if(device.device_status!=="active")return out(409,{error:"device_not_active"});
- const {data:updated,error:updateError}=await admin.from("pv_devices").update({device_status:"revoked",revoked_at:new Date().toISOString()}).eq("id",device.id).eq("device_status","active").select("id").maybeSingle();
+ // Un dispositivo pendiente también se puede rechazar (queda revoked sin haber estado activo).
+ const prev=device.device_status as string;
+ if(prev!=="active"&&prev!=="pending")return out(409,{error:"device_not_active"});
+ const {data:updated,error:updateError}=await admin.from("pv_devices").update({device_status:"revoked",revoked_at:new Date().toISOString()}).eq("id",device.id).eq("device_status",prev).select("id").maybeSingle();
  if(updateError)return out(500,{error:"device_revoke_failed"});
  if(!updated)return out(409,{error:"device_not_active"});
- await admin.from("pv_audit_logs").insert({organization_id:device.organization_id,user_id:user.id,action:"device_revoked",entity_type:"device",entity_id:device.id});
+ const action=prev==="pending"?"device_enrollment_rejected":"device_revoked";
+ await admin.from("pv_audit_logs").insert({organization_id:device.organization_id,user_id:user.id,action,entity_type:"device",entity_id:device.id});
  return out(200,{ok:true,deviceId:device.id,status:"revoked"});
 });
