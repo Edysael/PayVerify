@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "../../lib/supabase-server";
-import { formatCurrency, formatDate } from "../../lib/format";
-import { PAYMENT_STATUS_LABELS, type PaymentRow } from "../../lib/payments-types";
-import { getOrganizations } from "../../lib/organization";
-import OrganizationPicker from "../../components/OrganizationPicker";
-import PaymentExportButton from "../../components/PaymentExportButton";
-import DuplicateResolveAction from "../../components/DuplicateResolveAction";
+import { createSupabaseServerClient } from "../../../lib/supabase-server";
+import { formatCurrency, formatDate } from "../../../lib/format";
+import { PAYMENT_STATUS_LABELS, type PaymentRow } from "../../../lib/payments-types";
+import { getOrganizations } from "../../../lib/organization";
+import OrganizationPicker from "../../../components/OrganizationPicker";
+import PaymentExportButton from "../../../components/PaymentExportButton";
+import DuplicateResolveAction from "../../../components/DuplicateResolveAction";
 
 export default async function PaymentsPage() {
   const supabase=await createSupabaseServerClient();

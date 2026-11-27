@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "../../lib/supabase-server";
-import { getOrganizations } from "../../lib/organization";
-import OrganizationPicker from "../../components/OrganizationPicker";
-import StatementImport from "../../components/StatementImport";
-import ReconcileAction from "../../components/ReconcileAction";
-import UnreconcileAction from "../../components/UnreconcileAction";
-import { findReconciliationCandidates } from "../../lib/reconciliation/candidates";
+import { createSupabaseServerClient } from "../../../lib/supabase-server";
+import { getOrganizations } from "../../../lib/organization";
+import OrganizationPicker from "../../../components/OrganizationPicker";
+import StatementImport from "../../../components/StatementImport";
+import ReconcileAction from "../../../components/ReconcileAction";
+import UnreconcileAction from "../../../components/UnreconcileAction";
+import { findReconciliationCandidates } from "../../../lib/reconciliation/candidates";
 
 export default async function StatementsPage() {
   const supabase=await createSupabaseServerClient();
@@ -23,7 +23,7 @@ export default async function StatementsPage() {
     <p className="muted">CONTROL FINANCIERO</p><h1 className="title">Extractos y conciliación</h1>
     <OrganizationPicker organizations={organizations} activeId={activeId}/>
     <StatementImport organizationId={activeId}/>
-    <section className="panel"><h2>Movimientos importados</h2>
+    <section className="panel" id="movimientos"><h2>Movimientos importados</h2>
       {linesResult.error?<p>No se pudieron cargar las líneas. Revisa permisos y migraciones.</p>:lines.length===0?<p>No hay movimientos importados.</p>:
       <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Fecha","Monto","Referencia","Estado","Candidatos"].map(h=><th key={h} style={{textAlign:"left",padding:10}}>{h}</th>)}</tr></thead>
       <tbody>{lines.map(line=>{
