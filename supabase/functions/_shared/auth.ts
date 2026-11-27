@@ -46,6 +46,8 @@ export async function resolveCaller(
     const { data: k } = await ctx.admin.from("payverify_api_keys").select("id,organization_id")
       .eq("key_hash", await sha256Hex(apiKey)).is("revoked_at", null).maybeSingle();
     if (!k) return out(401, { error: "invalid_api_key" });
+    if (!isUuid(organizationId)) return out(400, { error: "invalid_organization" });
+    if (organizationId !== k.organization_id) return out(403, { error: "organization_mismatch" });
     await ctx.admin.from("payverify_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", k.id);
     return { orgId: k.organization_id, userId: null, via: "key" };
   }
