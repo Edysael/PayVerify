@@ -23,6 +23,7 @@ object PaymentSyncScheduler {
     fun enqueueNow(context: Context) {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val request = OneTimeWorkRequestBuilder<PaymentSyncWorker>().setConstraints(constraints).build()
-        WorkManager.getInstance(context).enqueueUniqueWork("payverify-sync-now", ExistingWorkPolicy.KEEP, request)
+        // APPEND_OR_REPLACE: un pago que llega mientras se envía otro queda en cola detrás, no se descarta.
+        WorkManager.getInstance(context).enqueueUniqueWork("payverify-sync-now", ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 }
