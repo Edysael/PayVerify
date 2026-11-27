@@ -11,7 +11,7 @@ PayVerify registra señales de pago estructuradas, las asocia con órdenes y per
 ## Estado verificado (26 de noviembre de 2026)
 - CI web, Android y SQL success: https://github.com/Edysael/PayVerify/actions/runs/45897110039
 - APK debug artifact `15154955206`.
-- Supabase PayVerify migrations 0001–0008 aplicadas; 13 Edge Functions activas; cron cada 5 minutos.
+- Supabase PayVerify migrations 0001–0012 aplicadas; 14 Edge Functions activas; cron cada 5 minutos (migración 0012). Detalle en `docs/AUDITORIA_2026-11-26.md`.
 - Hardening 0008 aplicado: 19 índices FK y políticas RLS de escritura sin SELECT redundante.
 - Prueba SQL de producción con rollback pasó; no quedaron datos QA.
 - Panel Vercel deployment READY desde commit de aplicación `826fba4`; alias https://payverify-nine.vercel.app apunta al deployment.

@@ -31,7 +31,7 @@ Compatibilidad: no se cambió ningún endpoint, parámetro obligatorio ni forma 
 
 ## Pendiente — menor
 - Duplicación de código en varias funciones frente a `_shared/auth.ts`.
-- `verify_jwt` de las funciones: ahora en `supabase/config.toml`. El cron de `payverify_expire_orders` sigue sin estar en el repo; antes de crear uno, revisar `select * from cron.job`.
+- `verify_jwt` de las funciones: ahora en `supabase/config.toml`. El cron de `payverify_expire_orders` está en la migración `0012` (no modifica el job existente).
 - `web/package-lock.json` resuelve `next` 15.5.29 (verificado, cumple `>= 15.2.3`). `npm audit --omit=dev` reporta `postcss` 8.4.31 (alta), fijado por Next y usado solo al compilar el CSS propio; la corrección exige Next 16 (cambio mayor, pendiente en rama aparte).
 - Parser CSV: solo ISO y `dd/mm/yyyy`, interpreta fechas en UTC, sin columnas separadas de débito/crédito.
 - La migración 0008 no es idempotente (no se editó: ya está aplicada).

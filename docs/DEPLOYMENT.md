@@ -20,6 +20,7 @@ Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistem
    - `supabase/migrations/0009_reconciliation_hardening.sql`
    - `supabase/migrations/0010_order_hint_attempts.sql`
    - `supabase/migrations/0011_resolve_possible_duplicate.sql`
+   - `supabase/migrations/0012_expire_orders_cron.sql`
 3. Prueba las migraciones en staging y verifica tablas, enums, RPC y políticas RLS. El CI (`supabase/tests/run.sh`) las aplica en un Postgres limpio y corre las pruebas SQL.
 4. Despliega todas las funciones (14):
    - `payment-event-ingest`
@@ -38,7 +39,7 @@ Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistem
    - `payment-duplicate-resolve`
 5. Configura secrets de Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Supabase normalmente los provee al runtime; nunca los copies a cliente).
 6. `order-create`, `order-status` y `order-update` se autentican con el header `x-payverify-key` (API key del comercio) y no con un JWT de sesión. En el proyecto actual (verificado el 2026-11-27) esas tres tienen `verify_jwt = false` y el resto `true`; `supabase/config.toml` lo define para `supabase functions deploy`.
-7. El vencimiento de órdenes (`payverify_expire_orders`) debe ejecutarse periódicamente (el README indica cada 5 minutos). Ese cron **no está en las migraciones**; en el proyecto actual ya existe el job `payverify-expire-orders` (`*/5 * * * *`). Antes de crear uno en otro proyecto, revisa `select * from cron.job;`.
+7. El vencimiento de órdenes (`payverify_expire_orders`) debe ejecutarse periódicamente (el README indica cada 5 minutos). La migración `0012` crea el job `payverify-expire-orders` (`*/5 * * * *`) si pg_cron está instalado y el job no existe; si pg_cron falta, solo avisa (habilítalo desde el panel de Supabase y vuelve a aplicarla).
 8. En Auth, configura proveedor Email OTP, SMTP adecuado y URLs de redirección para el dominio del panel.
 
 ## 2. Panel web (Vercel u otro hosting)
