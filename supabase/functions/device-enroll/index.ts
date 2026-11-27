@@ -14,7 +14,17 @@ Deno.serve(async req=>{
  if(!uuid(b?.organizationId)||typeof b?.deviceName!=="string"||b.deviceName.trim().length<1||b.deviceName.length>100)return out(400,{error:"invalid_payload"});
  const {data:member}=await admin.from("pv_organization_members").select("id").eq("organization_id",b.organizationId).eq("user_id",user.id).eq("status","active").maybeSingle();
  if(!member)return out(403,{error:"forbidden"});
- const {data:device,error:deviceErr}=await admin.from("pv_devices").insert({organization_id:b.organizationId,user_id:user.id,device_name:b.deviceName.trim(),platform:"android",device_status:"pending"}).select("id,device_status").single();
+ const deviceName=b.deviceName.trim();
+ // Idempotente: si este usuario ya tiene una solicitud pendiente con el mismo nombre en la organización, se devuelve esa.
+ const {data:pending,error:pendingErr}=await admin.from("pv_devices").select("id,device_name,device_status")
+  .eq("organization_id",b.organizationId).eq("user_id",user.id).eq("device_status","pending");
+ if(pendingErr)return out(500,{error:"device_enroll_failed"});
+ const same=(pending??[]).find((d:any)=>d.device_name===deviceName);
+ if(same)return out(200,{deviceId:same.id,status:same.device_status,duplicate:true});
+ // Tope de solicitudes pendientes por usuario y organización, para no llenar la cola de aprobación.
+ const MAX_PENDING=3;
+ if((pending?.length??0)>=MAX_PENDING)return out(409,{error:"too_many_pending_devices",limit:MAX_PENDING});
+ const {data:device,error:deviceErr}=await admin.from("pv_devices").insert({organization_id:b.organizationId,user_id:user.id,device_name:deviceName,platform:"android",device_status:"pending"}).select("id,device_status").single();
  if(deviceErr||!device)return out(500,{error:"device_enroll_failed"});
  await admin.from("pv_audit_logs").insert({organization_id:b.organizationId,user_id:user.id,action:"device_enrollment_requested",entity_type:"device",entity_id:device.id});
  return out(201,{deviceId:device.id,status:device.device_status});
