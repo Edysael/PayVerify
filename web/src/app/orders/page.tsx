@@ -24,7 +24,7 @@ export default async function OrdersPage() {
     supabase.from("pv_payment_events")
       .select("id,amount,reference,transaction_date,origin_phone_last4,origin_bank_code,capture_channel")
       .eq("organization_id", activeId).is("matched_order_id", null)
-      .neq("verification_status", "POSSIBLE_DUPLICATE")
+      .in("verification_status", ["RECEIVED_BY_SERVER", "PENDING_REVIEW", "RECONCILED"])
       .order("transaction_date", { ascending: false }).limit(50),
   ]);
   const orders = (ordersRes.data ?? []) as OrderRow[];
