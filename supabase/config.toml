@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.order-update]
 verify_jwt = false
 
+[functions.reader-status]
+verify_jwt = false
+
 [functions.order-action]
 verify_jwt = true
 
@@ -46,4 +49,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.payment-duplicate-resolve]
+verify_jwt = true
+
+[functions.device-heartbeat]
 verify_jwt = true
