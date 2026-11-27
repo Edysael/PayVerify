@@ -24,3 +24,13 @@ El backend verifica usuario, membresía, dispositivo activo, remitente habilitad
 
 ## Conciliación
 La función de candidato solo propone coincidencias. La RPC comprueba organización, rol, monto, moneda, referencia y tolerancia temporal; actualiza el evento, línea, registro de conciliación y auditoría en una transacción.
+
+
+## Órdenes y confirmación
+- \`order-create\`: crea una orden idempotente por organización y referencia externa.
+- \`order-update\`: recibe hints de teléfono/referencia; máximo 10 intentos por orden en total. Al exceder, responde HTTP 429 con Retry-After.
+- \`order-status\`: conserva el esquema de respuesta. \`paid\` solo es \`true\` para \`paid_confirmed\`; \`paymentDetected\` indica \`paid_probable\` o \`paid_confirmed\`.
+- \`order-action\`: acción humana autorizada para aprobar, rechazar, vincular o cancelar.
+
+## Importación de extracto
+\`statement-import\` acepta \`bankAccountId\` opcional por compatibilidad. Si se omite, debe existir exactamente una cuenta bancaria activa. Se valida cuenta y moneda. Lotes fallidos o \`pending_review\` pueden reintentarse; fingerprints duplicados se omiten sin abortar todo el archivo. La respuesta incluye \`skippedDuplicates\`.

@@ -30,3 +30,9 @@ Desde Android Studio:
 
 ## Limitación actual
 Las pruebas no se ejecutaron en este entorno porque no se instalaron dependencias npm, Android SDK/JDK ni un proyecto Supabase de staging. No se declara build/test passing sin ejecutar estos comandos.
+
+
+## Hardening 0009
+El runner SQL ejecuta \`0009_hardening_test.sql\` y reaplica la migración 0009 para comprobar idempotencia. Incluye pruebas de cuenta bancaria, estados no conciliables, hints limitados y preservación de \`paid_confirmed\`.
+CI añade \`npm run typecheck\`, \`npm audit --omit=dev --audit-level=high\` y \`deno check supabase/functions/*/index.ts supabase/functions/_shared/auth.ts\`.
+

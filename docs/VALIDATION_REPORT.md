@@ -26,3 +26,23 @@ La migración 0007 revoca el permiso `PUBLIC` para ejecutar dos funciones trigge
 - **Prueba en teléfono real** con notificaciones o SMS reales de bancos.
 - **Plantillas de bancos reales**: no hay muestras; el parser genérico puede fallar en formatos reales.
 - Pentest, revisión legal y política de Google Play para SMS.
+
+
+## Cambios de hardening en PR (26-nov-2026)
+Los cambios de la rama \`codex/payverify-hardening-2026-11-26\` no están desplegados. La validación automática de Android, web, SQL y Deno debe confirmarse en GitHub Actions antes del merge. No se modificó producción ni \`main\`.
+
+
+
+## Validación CI de hardening (27-nov-2026)
+Run: https://github.com/Edysael/PayVerify/actions/runs/45929058279
+- Android: unit tests y debug APK — PASS.
+- Web: npm ci, TypeScript, Vitest, Next.js 16.4.6 build y npm audit de dependencias de producción — PASS.
+- SQL: migraciones 0001–0009 y pruebas de regresión — PASS.
+- Edge Functions: deno check — PASS.
+- Resultado: 4/4 jobs verdes. No se aplicó la migración a Supabase de producción ni se desplegó Vercel.
+- La sección anterior describe la validación local inicial; esta ejecución CI es la evidencia de compilación integrada.
+
+
+## Validación final del PR (27-nov-2026)
+Run: https://github.com/Edysael/PayVerify/actions/runs/45929311408
+Los cuatro jobs pasaron en el commit final: Android tests/APK, web typecheck/tests/build/audit, SQL migrations/regression tests y Deno check. Producción permanece sin cambios.

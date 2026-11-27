@@ -3,6 +3,7 @@ import org.junit.Assert.*
 import org.junit.Test
 class PaymentSmsParserTest {
  @Test fun parsesTestMessage() { val r=PaymentSmsParser.parse("TESTBANK","Pago recibido Bs 125,50 referencia: ABCD1234",setOf("TESTBANK")); assertTrue(r is ParseResult.Success); assertEquals("ABCD1234",(r as ParseResult.Success).payment.reference) }
+ @Test fun parsesReferenceWithBankSeparators() { val r=PaymentSmsParser.parse("TESTBANK","Pago recibido Bs 125 referencia: AB-12/CD_34",setOf("TESTBANK")); assertTrue(r is ParseResult.Success); assertEquals("AB-12/CD_34",(r as ParseResult.Success).payment.reference) }
  @Test fun rejectsOtherSender() { assertTrue(PaymentSmsParser.parse("UNKNOWN","Pago recibido Bs 125 referencia: ABCD1234",setOf("TESTBANK")) is ParseResult.Rejected) }
  @Test fun rejectsOtp() { assertTrue(PaymentSmsParser.parse("TESTBANK","Código de seguridad 123456",setOf("TESTBANK")) is ParseResult.Rejected) }
  @Test fun parsesVenezuelanThousandsAndDecimal() {
