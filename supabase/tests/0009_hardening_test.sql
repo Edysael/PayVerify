@@ -64,11 +64,11 @@ begin
   insert into payverify_orders(organization_id,bank_account_id,external_ref,amount,expected_reference_tail,expires_at,created_at)
     values(org,a1,'H-NULL-REF',26.00,'7777',t+interval '30 min',t-interval '1 min') returning id into o2;
   insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
-    values(org,a1,dev,26.00,null,t,'h-null-ref','RECEIVED_BY_SERVER') returning id into p2;
+    values(org,a1,dev,26.00,'',t,'h-null-ref','RECEIVED_BY_SERVER') returning id into p2;
   r:=payverify_match_payment(p2);
   select status into st from payverify_orders where id=o2;
   assert not (r->>'matched')::boolean and r->>'reason'='no_candidate' and st='pending',
-    'NULL payment reference must not satisfy reference-tail matching: '||r::text||' status='||st;
+    'Empty payment reference must not satisfy reference-tail matching: '||r::text||' status='||st;
 
   insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
     values(org,a1,dev,30.00,'883344',t,'h4','RECONCILED') returning id into p2;
