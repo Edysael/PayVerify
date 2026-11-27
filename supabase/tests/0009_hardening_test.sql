@@ -4,7 +4,7 @@ begin;
 do $$
 declare
   org uuid:=gen_random_uuid();usr uuid:=gen_random_uuid();dev uuid:=gen_random_uuid();
-  a1 uuid;a2 uuid;o1 uuid;o2 uuid;o3 uuid;p1 uuid;p2 uuid;b uuid;l uuid;
+  a1 uuid;a2 uuid;a3 uuid;o1 uuid;o2 uuid;o3 uuid;p1 uuid;p2 uuid;b uuid;l uuid;
   r jsonb;st text;allowed boolean;i integer;t timestamptz:=now();
 begin
   insert into auth.users(id,email) values(usr,'harden@t');
@@ -15,6 +15,8 @@ begin
     values(org,'Banco A','Cuenta A','VES','active') returning id into a1;
   insert into pv_bank_accounts(organization_id,bank_name,account_alias,currency,status)
     values(org,'Banco B','Cuenta B','VES','active') returning id into a2;
+  insert into pv_bank_accounts(organization_id,bank_name,account_alias,currency,status)
+    values(org,'Banco USD','Cuenta USD','USD','active') returning id into a3;
   insert into payverify_orders(organization_id,bank_account_id,external_ref,amount,expected_reference_tail,expires_at,created_at)
     values(org,a1,'H-1',12.34,'424242',t+interval '30 min',t-interval '1 min') returning id into o1;
   insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
@@ -51,6 +53,16 @@ begin
     perform payverify_order_action(o2,usr,'link',p2);
     raise exception 'expected manual bank_account_mismatch';
   exception when others then assert sqlerrm='bank_account_mismatch','manual link error: '||sqlerrm; end;
+  -- Manual linking must not accept equal numeric amounts across currencies.
+  insert into payverify_orders(organization_id,external_ref,amount,expires_at)
+    values(org,'H-CURRENCY',40.00,t+interval '30 min') returning id into o2;
+  insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,currency,reference,transaction_date,idempotency_key,verification_status)
+    values(org,a3,dev,40.00,'USD','USD-40',t,'h-currency','RECEIVED_BY_SERVER') returning id into p2;
+  begin
+    perform payverify_order_action(o2,usr,'link',p2);
+    raise exception 'expected currency_mismatch';
+  exception when others then assert sqlerrm='currency_mismatch','wrong currency error: '||sqlerrm; end;
+
   insert into payverify_orders(organization_id,bank_account_id,external_ref,amount,expected_reference_tail,expires_at,created_at)
     values(org,a1,'H-3',25.00,'333333',t+interval '30 min',t-interval '1 min') returning id into o3;
   insert into pv_payment_events(organization_id,bank_account_id,device_id,amount,reference,transaction_date,idempotency_key,verification_status)
