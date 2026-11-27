@@ -19,9 +19,11 @@ Deno.serve(async (req) => {
     p_order_id: order.id, p_phone_last4: b.customerPhoneLast4 ?? null, p_reference_tail: b.referenceTail ?? null,
   });
   if (error) {
-    const known = ["invalid_reference_tail", "invalid_phone", "invalid_state"];
+    // too_many_attempts se agrega con la migración 0010 (máximo 5 pistas por orden).
+    const known = ["invalid_reference_tail", "invalid_phone", "invalid_state", "too_many_attempts"];
     const code = known.find((k) => error.message?.includes(k));
-    return out(code === "invalid_state" ? 409 : code ? 400 : 500, { error: code ?? "order_update_failed" });
+    const status = code === "invalid_state" ? 409 : code === "too_many_attempts" ? 429 : code ? 400 : 500;
+    return out(status, { error: code ?? "order_update_failed" });
   }
   return out(200, { orderId: data.id, status: data.status, matchMethod: data.match_method });
 });
