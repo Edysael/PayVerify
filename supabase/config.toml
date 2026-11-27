@@ -1,0 +1,27 @@
+# API-key-capable checkout functions authenticate callers inside resolveCaller.
+[functions.api-key-create]
+verify_jwt = true
+[functions.device-approve]
+verify_jwt = true
+[functions.device-enroll]
+verify_jwt = true
+[functions.device-revoke]
+verify_jwt = true
+[functions.order-action]
+verify_jwt = true
+[functions.order-create]
+verify_jwt = false
+[functions.order-status]
+verify_jwt = false
+[functions.order-update]
+verify_jwt = false
+[functions.organization-create]
+verify_jwt = true
+[functions.payment-event-ingest]
+verify_jwt = true
+[functions.payment-reconcile]
+verify_jwt = true
+[functions.payment-unreconcile]
+verify_jwt = true
+[functions.statement-import]
+verify_jwt = true
