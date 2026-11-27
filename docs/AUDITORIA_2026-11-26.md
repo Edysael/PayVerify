@@ -68,6 +68,6 @@ Hecho con el conector de Supabase, sin pasar por GitHub (el conector de GitHub q
 
 Antes de reemplazar código en producción se comparó con el repo: `payverify_order_set_hints` era idéntica a 0005; `payverify_match_payment` solo difiere en comentarios; las funciones redesplegadas coincidían con el repo anterior a los cambios. PayVerify tenía 0 órdenes, 0 pagos y 0 dispositivos. El asesor de seguridad no reporta hallazgos nuevos de PayVerify.
 
-**Panel web:** el proyecto Vercel `payverify` no despliega desde Git y su directorio raíz es la raíz del repo; un despliegue desde Git falla porque el panel está en `web/`. Para desplegar: `vercel --prod` desde `web/`, o fijar el directorio raíz del proyecto en `web` (y opcionalmente conectar el repo).
+**Panel web:** desplegado en producción el 2026-11-27 desde `main` (`d5c0da4`), tras fijar el directorio raíz del proyecto Vercel en `web` (autorizado por el dueño). Verificado: `/api/health` responde `ok` con `environmentConfigured: true` y las cabeceras de seguridad están presentes. El proyecto aún no está conectado a Git, así que los merges no se despliegan solos.
 
 **No verificado:** no se llamó a las funciones desplegadas con usuarios reales (sin acceso de red a Supabase desde el entorno de trabajo).
