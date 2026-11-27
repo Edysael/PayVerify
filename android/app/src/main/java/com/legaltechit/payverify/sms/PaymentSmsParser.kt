@@ -23,7 +23,7 @@ object PaymentSmsParser {
     private val amountRx = Regex("(?i)(?:Bs\\.?|VES)\\s*([0-9][0-9.,]*)|([0-9][0-9.,]*)\\s*(?:Bs\\.?|VES)")
     private val refRx = Regex(
         "(?i)(?:ref(?:erencia)?\\.?|refer|n[uú]mero\\s+de\\s+operaci[oó]n|operaci[oó]n|comprobante)" +
-            "\\s*(?:n[°ºo]\\.?)?\\s*[:#-]?\\s*([A-Z0-9]{4,32})"
+            "\\s*(?:n[°ºo]\\.?)?\\s*[:#-]?\\s*([A-Z0-9/_-]{4,64})"
     )
     private val otpRx = Regex("(?i)\\b(OTP|clave\\s+din[aá]mica|c[oó]digo\\s+de\\s+seguridad|token)\\b")
     private val incomingRx = Regex(
