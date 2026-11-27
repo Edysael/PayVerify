@@ -26,3 +26,8 @@ La migración 0007 revoca el permiso `PUBLIC` para ejecutar dos funciones trigge
 - **Prueba en teléfono real** con notificaciones o SMS reales de bancos.
 - **Plantillas de bancos reales**: no hay muestras; el parser genérico puede fallar en formatos reales.
 - Pentest, revisión legal y política de Google Play para SMS.
+
+
+## Cambios de hardening en PR (26-nov-2026)
+Los cambios de la rama \`codex/payverify-hardening-2026-11-26\` no están desplegados. La validación automática de Android, web, SQL y Deno debe confirmarse en GitHub Actions antes del merge. No se modificó producción ni \`main\`.
+
