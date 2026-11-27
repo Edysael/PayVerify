@@ -1,4 +1,6 @@
 name: PayVerify CI
+permissions:
+  contents: read
 
 concurrency:
   group: payverify-ci-${{ github.ref }}
@@ -33,11 +35,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      - run: npm audit --omit=dev --audit-level=high
 
   sql:
     runs-on: ubuntu-latest
@@ -56,3 +60,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash ./supabase/tests/run.sh
+
+  edge-functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Edge Functions
+        run: deno check supabase/functions/*/index.ts supabase/functions/_shared/auth.ts
