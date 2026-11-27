@@ -8,6 +8,7 @@ Deno.serve(async (req) => {
   if (!ctx) return out(503, { error: "server_not_configured" });
   let b: any;
   try { b = await req.json(); } catch { return out(400, { error: "invalid_json" }); }
+  if (!b || typeof b !== "object" || Array.isArray(b)) return out(400, { error: "invalid_json" });
   const caller = await resolveCaller(req, ctx, b?.organizationId);
   if (caller instanceof Response) return caller;
   if (typeof b.externalRef !== "string" || !/^[\w./-]{1,64}$/.test(b.externalRef)) return out(400, { error: "invalid_external_ref" });

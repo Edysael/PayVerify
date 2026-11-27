@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const headers={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Content-Type":"application/json"};
 const response=(status:number,body:unknown)=>new Response(JSON.stringify(body),{status,headers});
 const uuid=(v:unknown)=>typeof v==="string"&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
@@ -24,7 +24,8 @@ Deno.serve(async req=>{
     p_line_id:(body as any).lineId,p_payment_id:(body as any).paymentId,p_user_id:user.id,p_tolerance_minutes:2880
   });
   if(rpcError) {
-    const known=["forbidden","not_found","organization_mismatch","already_reconciled","amount_mismatch","currency_mismatch","reference_mismatch","date_outside_tolerance","invalid_tolerance"];
+    // payment_not_reconcilable y bank_account_mismatch se agregan con la migración 0009.
+    const known=["forbidden","not_found","organization_mismatch","already_reconciled","amount_mismatch","currency_mismatch","reference_mismatch","date_outside_tolerance","invalid_tolerance","payment_not_reconcilable","bank_account_mismatch"];
     const code=known.find(c=>rpcError.message.includes(c));
     return response(code==="forbidden"?403:code==="not_found"?404:code?409:500,{error:code??"reconciliation_failed"});
   }
