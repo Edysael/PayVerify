@@ -18,3 +18,11 @@ Fecha: 26 de noviembre de 2026. Rama: codex/payverify-hardening-2026-11-26.
 - Next.js 15 Maintenance LTS termina el 31-ene-2027; planificar migración a Next.js 16.
 - CSP requiere nonce/estrategia compatible con scripts de Next.js.
 - La migración 0009 y funciones modificadas no están desplegadas; aplicar primero en staging.
+
+
+## Ajustes adicionales
+- Ingesta: valida que la cuenta vinculada al remitente esté activa y sea VES; la detección de duplicados se limita a la misma cuenta.
+- Al reenviar un evento idempotente antiguo sin cuenta, puede completar la asociación si el remitente ya está vinculado y no contradice una orden enlazada.
+- En la versión real del repositorio, `device-revoke` ya permite revocar dispositivos pendientes; no requería ese cambio.
+- Quedan sin política aplicada el límite de organizaciones y la idempotencia/límite de nuevos dispositivos.
+- Next.js 15.5.29 es el parche de la línea 15 para la ronda de seguridad de noviembre; Maintenance LTS termina el 31-ene-2027.
