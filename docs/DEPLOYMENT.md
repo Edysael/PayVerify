@@ -1,7 +1,7 @@
 # Despliegue PayVerify — staging primero
 
 > **Estado actual:** PayVerify ya está desplegado en `LEGAL TECH-IT API SERVICES` con objetos `pv_*`/`payverify_*`, 13 Edge Functions y panel en Vercel. Esta guía describe un despliegue nuevo de staging; no vuelvas a aplicar estas migraciones en producción ni crees otro proyecto para la instalación actual. Consulta `ESTADO_ACTUAL_2026-11-26.md`.
-> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. El resto del paquete (CI, `next.config.ts`, pruebas, `supabase/config.toml`) está en el repo desde el PR #3; las funciones `order-*` con la guarda de cuerpo `null` aún no se redesplegaron.
+> La migración `0009` y las versiones nuevas de `statement-import` y `payment-reconcile` ya están aplicadas en producción (2026-11-27); ver `AUDITORIA_2026-11-26.md`. Las migraciones 0010 y 0011 y las funciones `order-*`, `organization-create`, `device-enroll`, `device-revoke` y `payment-duplicate-resolve` también están en producción (2026-11-27, PRs #3–#8). El panel web en Vercel **sigue en el commit `826fba4`**: los cambios de panel de los PRs #3–#8 aún no están desplegados.
 
 ## 0. Separación
 Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistema contable ni APIs ajenas. No pongas la service role key en Next.js público ni en Android.
@@ -18,8 +18,10 @@ Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistem
    - `supabase/migrations/0007_revoke_public_trigger_execute.sql`
    - `supabase/migrations/0008_performance_and_policy_hardening.sql`
    - `supabase/migrations/0009_reconciliation_hardening.sql`
+   - `supabase/migrations/0010_order_hint_attempts.sql`
+   - `supabase/migrations/0011_resolve_possible_duplicate.sql`
 3. Prueba las migraciones en staging y verifica tablas, enums, RPC y políticas RLS. El CI (`supabase/tests/run.sh`) las aplica en un Postgres limpio y corre las pruebas SQL.
-4. Despliega todas las funciones (13):
+4. Despliega todas las funciones (14):
    - `payment-event-ingest`
    - `statement-import`
    - `payment-reconcile`
@@ -33,6 +35,7 @@ Usa un proyecto Supabase exclusivo de PayVerify. No conectes ni migres el sistem
    - `order-status`
    - `order-update`
    - `order-action`
+   - `payment-duplicate-resolve`
 5. Configura secrets de Edge Functions: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Supabase normalmente los provee al runtime; nunca los copies a cliente).
 6. `order-create`, `order-status` y `order-update` se autentican con el header `x-payverify-key` (API key del comercio) y no con un JWT de sesión. En el proyecto actual (verificado el 2026-11-27) esas tres tienen `verify_jwt = false` y el resto `true`; `supabase/config.toml` lo define para `supabase functions deploy`.
 7. El vencimiento de órdenes (`payverify_expire_orders`) debe ejecutarse periódicamente (el README indica cada 5 minutos). Ese cron **no está en las migraciones**; en el proyecto actual ya existe el job `payverify-expire-orders` (`*/5 * * * *`). Antes de crear uno en otro proyecto, revisa `select * from cron.job;`.
