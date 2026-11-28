@@ -5,6 +5,7 @@ import com.legaltechit.payverify.data.PayVerifyDatabaseProvider
 import com.legaltechit.payverify.data.PaymentEventEntity
 import com.legaltechit.payverify.data.PaymentEventFactory
 import com.legaltechit.payverify.data.PaymentFingerprint
+import com.legaltechit.payverify.receiving.SyncSignal
 import com.legaltechit.payverify.sync.PaymentSyncScheduler
 import java.math.RoundingMode
 
@@ -74,6 +75,8 @@ object PaymentCaptureProcessor {
             )
         ) != -1L
         if (inserted) {
+            // Si "Recibir pagos" está activo, el servicio lo envía al instante; WorkManager queda de respaldo.
+            SyncSignal.trigger()
             PaymentSyncScheduler.schedule(context)
             PaymentSyncScheduler.enqueueNow(context)
         }

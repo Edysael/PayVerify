@@ -14,14 +14,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.legaltechit.payverify.data.PayVerifyDatabaseProvider
 import com.legaltechit.payverify.security.SecureConfig
+import com.legaltechit.payverify.security.OrganizationOption
 import com.legaltechit.payverify.security.SupabaseMobileAuth
 import com.legaltechit.payverify.sync.PaymentSyncScheduler
+import com.legaltechit.payverify.receiving.Heartbeat
+import com.legaltechit.payverify.receiving.HeartbeatPolicy
+import com.legaltechit.payverify.receiving.ReceivingController
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,12 +38,18 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("payverify", MODE_PRIVATE)
         prefs.edit().putBoolean("sms_permission_granted", granted).apply()
         val configured = prefs.getStringSet("authorized_senders", emptySet())?.isNotEmpty() == true
-        prefs.edit().putBoolean("capture_enabled", granted && configured).apply()
+        val enrolled = SecureConfig.get(this, "device_id").isNotBlank()
+        if (granted && configured && enrolled) ReceivingController.enable(this)
+        else prefs.edit().putBoolean("capture_enabled", granted && configured).apply()
         recreate()
     }
 
+    // Android 13+: permiso para mostrar la notificación fija de "Recibir pagos".
+    private val askNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SupabaseMobileAuth.ensureDefaults(this)
         val prefs = getSharedPreferences("payverify", MODE_PRIVATE)
         val permissionNow = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
         prefs.edit().putBoolean("sms_permission_granted", permissionNow).apply()
@@ -57,7 +70,14 @@ class MainActivity : ComponentActivity() {
                 var deviceId by remember { mutableStateOf(SecureConfig.get(this, "device_id")) }
                 var email by remember { mutableStateOf("") }
                 var otp by remember { mutableStateOf("") }
-                var deviceName by remember { mutableStateOf("PayVerify Android") }
+                var deviceName by remember { mutableStateOf(android.os.Build.MODEL ?: "PayVerify Android") }
+                var password by remember { mutableStateOf("") }
+                var orgName by remember { mutableStateOf(SecureConfig.get(this, "organization_name")) }
+                var orgOptions by remember { mutableStateOf<List<OrganizationOption>>(emptyList()) }
+                var loggedIn by remember { mutableStateOf(SecureConfig.get(this, "access_token").isNotBlank()) }
+                var loginBusy by remember { mutableStateOf(false) }
+                var loginMessage by remember { mutableStateOf("") }
+                var showAdvanced by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
                 var configMessage by remember { mutableStateOf("") }
                 var senderMessage by remember { mutableStateOf("") }
@@ -72,6 +92,38 @@ class MainActivity : ComponentActivity() {
                 var connectionBusy by remember { mutableStateOf(false) }
                 var connectionTestMessage by remember { mutableStateOf("") }
                 var statusMessage by remember { mutableStateOf("") }
+                var receiving by remember { mutableStateOf(ReceivingController.isEnabled(this)) }
+                var receivingMessage by remember { mutableStateOf("") }
+                var hbText by remember { mutableStateOf("") }
+                var hbError by remember { mutableStateOf("") }
+                var batteryOk by remember { mutableStateOf(Heartbeat.batteryUnrestricted(this)) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        hbText = HeartbeatPolicy.describe(prefs.getLong("hb_last_ok_at", 0L), System.currentTimeMillis())
+                        hbError = prefs.getString("hb_last_error", "").orEmpty()
+                        batteryOk = Heartbeat.batteryUnrestricted(this@MainActivity)
+                        receiving = ReceivingController.isEnabled(this@MainActivity)
+                        enabled = prefs.getBoolean("capture_enabled", false)
+                        delay(5_000)
+                    }
+                }
+                fun startReceiving(): Boolean {
+                    val hasSource = prefs.getStringSet("authorized_senders", emptySet())?.isNotEmpty() == true
+                    if (SecureConfig.get(this@MainActivity, "device_id").isBlank()) { receivingMessage = "Primero configura la conexión, inicia sesión y solicita la aprobación del dispositivo (más abajo)."; return false }
+                    if (!hasSource) { receivingMessage = "Primero autoriza el remitente SMS o la app de tu banco (más abajo)."; return false }
+                    if (android.os.Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    ReceivingController.enable(this@MainActivity)
+                    receiving = true; enabled = true
+                    receivingMessage = "Recibiendo pagos. Puedes bloquear la pantalla; verás la notificación «PayVerify activo»."
+                    return true
+                }
+                fun stopReceiving() {
+                    ReceivingController.disable(this@MainActivity)
+                    receiving = false; enabled = false
+                    receivingMessage = "Recepción de pagos desactivada. El panel y tu caja verán el lector como pausado."
+                }
                 val localEventsFlow = remember { PayVerifyDatabaseProvider.get(this).paymentEventDao().observeAll() }
                 val localEvents by localEventsFlow.collectAsState(initial = emptyList())
                 Surface(Modifier.fillMaxSize()) {
@@ -79,6 +131,27 @@ class MainActivity : ComponentActivity() {
                         Text("PayVerify Mobile", style = MaterialTheme.typography.headlineMedium)
                         Text("Detección local de notificaciones de pago")
                         Text("Un SMS detectado no confirma por sí solo que los fondos estén disponibles.")
+                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (receiving) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Recibir pagos", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                        Text(if (receiving) "🟢 Activo: escuchando avisos del banco" else "⚪ Desactivado")
+                                    }
+                                    Switch(checked = receiving, onCheckedChange = { on -> if (on) startReceiving() else stopReceiving() })
+                                }
+                                if (receiving) {
+                                    Text(hbText)
+                                    if (hbError.isNotBlank()) Text("⚠ $hbError", color = MaterialTheme.colorScheme.error)
+                                    if (!batteryOk) {
+                                        Text("Para que Android no la duerma con la pantalla bloqueada, quita el ahorro de batería a PayVerify (una sola vez).")
+                                        Button(onClick = { startActivity(ReceivingController.batteryExemptionIntent(this@MainActivity)) }) { Text("Quitar ahorro de batería") }
+                                    } else Text("✓ Sin ahorro de batería: funciona con la pantalla bloqueada.")
+                                    Text("Consejo: deja el teléfono cargando durante el horario de atención.", style = MaterialTheme.typography.bodySmall)
+                                }
+                                if (receivingMessage.isNotBlank()) Text(receivingMessage, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                         OutlinedTextField(value=sender,onValueChange={sender=it},label={Text("Remitente SMS autorizado exacto")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         Button(onClick={
                             val clean=sender.trim()
@@ -93,7 +166,7 @@ class MainActivity : ComponentActivity() {
                         Button(onClick={
                             if(!permission) { captureMessage="Solicitando permiso SMS…"; askSms.launch(Manifest.permission.RECEIVE_SMS) }
                             else if(!saved) { enabled=false; prefs.edit().putBoolean("capture_enabled",false).apply(); captureMessage="Primero guarda un remitente SMS autorizado." }
-                            else { enabled=!enabled; prefs.edit().putBoolean("capture_enabled",enabled).apply(); captureMessage=if(enabled) "Captura SMS activada." else "Captura SMS pausada." }
+                            else { if(enabled) { stopReceiving(); captureMessage="Captura SMS pausada." } else if(startReceiving()) captureMessage="Captura SMS activada." else captureMessage=receivingMessage }
                         }) { Text(if(enabled) "Pausar captura" else if(!permission) "Conceder permiso y activar" else "Activar captura") }
                         Text(if(permission) "Permiso SMS concedido" else "Permiso SMS pendiente")
                         if(captureMessage.isNotBlank()) Text(captureMessage)
@@ -146,9 +219,8 @@ class MainActivity : ComponentActivity() {
                                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                                 } else if(appRules.isEmpty()) appMessage="Autoriza primero la app de tu banco."
                                 else {
-                                    enabled=!enabled
-                                    prefs.edit().putBoolean("capture_enabled",enabled).apply()
-                                    appMessage=if(enabled) "Captura de notificaciones activada." else "Captura pausada."
+                                    if(enabled) { stopReceiving(); appMessage="Captura pausada." }
+                                    else appMessage=if(startReceiving()) "Captura de notificaciones activada." else receivingMessage
                                 }
                             }) { Text(if(enabled) "Pausar captura" else "Activar captura solo con notificaciones") }
                         }
@@ -170,8 +242,60 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         Divider()
-                        Text("Conexión de piloto", style=MaterialTheme.typography.titleMedium)
-                        Text("Configura estos datos desde un entorno de prueba. El token se cifra localmente; no compartas esta pantalla.")
+                        Text("Conecta este teléfono", style=MaterialTheme.typography.titleMedium)
+                        Text("Entra con el mismo correo y contraseña del panel de PayVerify.")
+                        if (deviceId.isNotBlank()) {
+                            Text("✓ Teléfono conectado a ${orgName.ifBlank { "tu comercio" }}.", fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedTextField(value=email,onValueChange={email=it},label={Text("Correo")},singleLine=true,modifier=Modifier.fillMaxWidth())
+                        OutlinedTextField(value=password,onValueChange={password=it},label={Text("Contraseña")},singleLine=true,
+                            visualTransformation=androidx.compose.ui.text.input.PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth())
+                        Button(enabled=!loginBusy,onClick={
+                            if(email.isBlank()||password.isBlank()) loginMessage="Escribe tu correo y tu contraseña."
+                            else scope.launch {
+                                loginBusy=true; loginMessage="Ingresando…"
+                                try {
+                                    val orgs=withContext(Dispatchers.IO) {
+                                        SupabaseMobileAuth.signInWithPassword(this@MainActivity,email,password)
+                                        SupabaseMobileAuth.listOrganizations(this@MainActivity)
+                                    }
+                                    password=""; loggedIn=true; orgOptions=orgs
+                                    endpoint=SecureConfig.get(this@MainActivity,"supabase_url"); anonKey=SecureConfig.get(this@MainActivity,"anon_key")
+                                    loginMessage = when (orgs.size) {
+                                        0 -> "Tu usuario no pertenece a ningún comercio. Créalo primero en el panel web."
+                                        1 -> "Sesión iniciada. Toca tu comercio para conectar este teléfono."
+                                        else -> "Sesión iniciada. Elige el comercio que recibirá los pagos en este teléfono."
+                                    }
+                                } catch(e:Exception) { loginMessage=e.message ?: "No se pudo ingresar." }
+                                finally { loginBusy=false }
+                            }
+                        }) { Text(if(loginBusy) "Ingresando…" else "Ingresar") }
+                        if(loginMessage.isNotBlank()) Text(loginMessage)
+                        orgOptions.forEach { option ->
+                            OutlinedButton(enabled=!deviceBusy,modifier=Modifier.fillMaxWidth(),onClick={
+                                scope.launch {
+                                    deviceBusy=true; deviceMessage="Conectando con ${option.name}…"
+                                    try {
+                                        val previousOrg=SecureConfig.get(this@MainActivity,"organization_id")
+                                        if(previousOrg.isNotBlank() && previousOrg!=option.id) { SecureConfig.set(this@MainActivity,"device_id",""); deviceId="" }
+                                        SecureConfig.set(this@MainActivity,"organization_id",option.id)
+                                        SecureConfig.set(this@MainActivity,"organization_name",option.name)
+                                        orgId=option.id; orgName=option.name
+                                        if (deviceId.isBlank()) {
+                                            val enrolled=withContext(Dispatchers.IO) { SupabaseMobileAuth.enrollDevice(this@MainActivity,option.id,deviceName.trim().ifBlank { "PayVerify Android" }) }
+                                            deviceId=enrolled; SecureConfig.set(this@MainActivity,"device_id",enrolled)
+                                        }
+                                        orgOptions=emptyList()
+                                        deviceMessage="Listo. Pide al administrador que apruebe este teléfono en el panel (Dispositivos) y luego activa «Recibir pagos»."
+                                    } catch(e:Exception) { deviceMessage=e.message ?: "No se pudo conectar el teléfono." }
+                                    finally { deviceBusy=false }
+                                }
+                            }) { Text(option.name) }
+                        }
+                        if(deviceMessage.isNotBlank()) Text(deviceMessage)
+                        TextButton(onClick={ showAdvanced=!showAdvanced }) { Text(if(showAdvanced) "Ocultar configuración avanzada" else "Configuración avanzada (soporte)") }
+                        if (showAdvanced) {
+                        Text("Solo para soporte técnico. El token se cifra localmente; no compartas esta pantalla.")
                         OutlinedTextField(value=endpoint,onValueChange={endpoint=it},label={Text("URL Supabase")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         OutlinedTextField(value=anonKey,onValueChange={anonKey=it},label={Text("Anon / publishable key")},singleLine=true,modifier=Modifier.fillMaxWidth())
                         OutlinedTextField(value=orgId,onValueChange={orgId=it},label={Text("Organization UUID")},singleLine=true,modifier=Modifier.fillMaxWidth())
@@ -264,6 +388,7 @@ class MainActivity : ComponentActivity() {
                         }) { Text(if(syncBusy) "Programando…" else "Programar sincronización") }
                         if(syncMessage.isNotBlank()) Text(syncMessage)
                         Text("Dispositivo: ${SecureConfig.get(this@MainActivity,"device_id").ifBlank { "No enrolado" }}")
+                        }
                         Text("No se transmite el texto completo del SMS, OTP, PIN ni credenciales bancarias.")
                     }
                 }

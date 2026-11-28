@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import {
-  IconBank, IconDevice, IconHome, IconKey, IconLogout, IconMenu, IconOrders, IconOrganizations,
+  IconBank, IconDevice, IconDownload, IconHome, IconUserPlus, IconKey, IconLogout, IconMenu, IconOrders, IconOrganizations,
   IconPayments, IconSenders, IconSettings, IconStatements, IconUsers, IconX, LogoMark,
 } from "../ui/Icons";
 
@@ -14,6 +14,7 @@ const MAIN = [
   { href: "/payments", label: "Pagos", Icon: IconPayments },
   { href: "/statements", label: "Extractos y conciliación", Icon: IconStatements },
   { href: "/devices", label: "Dispositivos", Icon: IconDevice },
+  { href: "/descargar", label: "Descargar app", Icon: IconDownload },
   { href: "/settings/senders", label: "Remitentes (SMS y apps)", Icon: IconSenders },
   { href: "/settings/api-keys", label: "Llaves de API", Icon: IconKey },
 ];
@@ -23,7 +24,8 @@ const ADMIN = [
   { href: "/settings/bank-accounts", label: "Cuentas bancarias", Icon: IconBank },
   { href: "/settings", label: "Configuración", Icon: IconSettings },
 ];
-const ALL = [...MAIN, ...ADMIN].map((i) => i.href);
+const CLIENTS = { href: "/admin/clientes", label: "Nuevo cliente", Icon: IconUserPlus };
+const ALL = [...MAIN, ...ADMIN, CLIENTS].map((i) => i.href);
 
 /** La ruta más específica que coincide es la activa (así /settings no se marca en /settings/senders). */
 function activeHref(pathname: string): string | null {
@@ -38,7 +40,7 @@ export function Brand() {
   </Link>;
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean }) {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -70,7 +72,7 @@ export default function Sidebar() {
       <nav className="nav">{MAIN.map(item)}</nav>
       <div className="nav-sep" />
       <div className="nav-label">ADMINISTRACIÓN</div>
-      <nav className="nav">{ADMIN.map(item)}</nav>
+      <nav className="nav">{(isPlatformAdmin ? [CLIENTS, ...ADMIN] : ADMIN).map(item)}</nav>
       <div className="nav-sep" />
       <button className="logout" onClick={() => void signOut()} disabled={busy}><IconLogout size={22} />{busy ? "Cerrando…" : "Cerrar sesión"}</button>
       <div className="sidebar-spacer" />

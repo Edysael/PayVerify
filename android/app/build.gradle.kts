@@ -12,9 +12,32 @@ android {
         applicationId = "com.legaltechit.payverify"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.2.0"
+        // En CI la versión viene del número de ejecución, para que cada APK publicado actualice al anterior.
+        versionCode = (System.getenv("PV_VERSION_CODE") ?: "3").toInt()
+        versionName = System.getenv("PV_VERSION_NAME") ?: "0.4.0"
+        buildConfigField("String", "SUPABASE_URL", "\"https://fzumtynskvcrybzejmbo.supabase.co\"")
+        // Clave pública (publishable) de Supabase: es la misma que usa el panel web; no es secreta.
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"sb_publishable_GpmOxN3xFlE1ryDVxmDYdg_cttADajQ\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    // Firma de release: la clave vive solo en los secretos de GitHub (nunca en el repo, que es público).
+    val keystorePath = System.getenv("PV_KEYSTORE_PATH")
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("PV_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PV_KEY_ALIAS")
+                keyPassword = System.getenv("PV_KEYSTORE_PASSWORD")
+                storeType = "PKCS12"
+            }
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (keystorePath != null) signingConfig = signingConfigs.getByName("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -23,7 +46,7 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 dependencies {

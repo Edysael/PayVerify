@@ -13,7 +13,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
-  const { activeId } = await getOrganizations(supabase, user.id);
+  const [{ activeId }, adminRes] = await Promise.all([
+    getOrganizations(supabase, user.id),
+    supabase.rpc("pv_is_platform_admin"),
+  ]);
+  const isPlatformAdmin = adminRes.data === true;
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const email = user.email ?? "";
   const metaName = [meta.full_name, meta.name].find((v): v is string => typeof v === "string" && v.trim().length > 0);
@@ -40,7 +44,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   }
 
   return <div className="app">
-    <Sidebar />
+    <Sidebar isPlatformAdmin={isPlatformAdmin} />
     <div className="content">
       <Topbar alerts={alerts} name={name} email={email} role={role} initials={initials(name)} />
       {children}
