@@ -97,5 +97,6 @@ export default function SignInPage() {
       {mode !== 'signup' && <button type="button" style={link} onClick={() => switchMode('signup')}>Crear cuenta</button>}
       {mode !== 'forgot' && <button type="button" style={link} onClick={() => switchMode('forgot')}>Olvidé mi contraseña</button>}
     </p>
+    <p className="muted">¿Vas a recibir pagos en un teléfono Android? <a href="/descargar">Descarga la app</a>.</p>
   </main>;
 }

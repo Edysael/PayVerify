@@ -21,12 +21,56 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: 8.10.2 }
-      - name: Unit tests and debug APK
-        run: gradle -p android testDebugUnitTest assembleDebug --stacktrace
+      - name: Unit tests, debug APK and unsigned release build check
+        run: gradle -p android testDebugUnitTest assembleDebug assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: payverify-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
+
+  # APK firmado publicado en un link fijo:
+  # https://github.com/Edysael/PayVerify/releases/latest/download/payverify.apk
+  # Solo en main y solo si existen los secretos de firma.
+  android-release:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: android-apk
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-java@v4
+        if: env.HAS_KEY == 'true'
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.HAS_KEY == 'true'
+        with: { gradle-version: 8.10.2 }
+      - name: Signed release APK
+        if: env.HAS_KEY == 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PV_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PV_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PV_VERSION_CODE: ${{ github.run_number }}
+          PV_VERSION_NAME: 0.4.${{ github.run_number }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.p12"
+          export PV_KEYSTORE_PATH="$RUNNER_TEMP/release.p12"
+          gradle -p android assembleRelease --stacktrace
+          cp android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/payverify.apk"
+          rm -f "$RUNNER_TEMP/release.p12"
+      - name: Publish release
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "android-v0.4.${{ github.run_number }}" "$RUNNER_TEMP/payverify.apk" \
+            --title "PayVerify Android 0.4.${{ github.run_number }}" \
+            --notes "APK firmado de PayVerify. Descarga: https://github.com/Edysael/PayVerify/releases/latest/download/payverify.apk" \
+            --latest --target "${{ github.sha }}"
 
   web:
     runs-on: ubuntu-latest
