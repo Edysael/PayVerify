@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "../../lib/supabase-server";
-import { formatCurrency, formatDate } from "../../lib/format";
-import { getOrganizations } from "../../lib/organization";
-import OrganizationPicker from "../../components/OrganizationPicker";
-import OrderActions from "../../components/OrderActions";
+import { createSupabaseServerClient } from "../../../lib/supabase-server";
+import { formatCurrency, formatDate } from "../../../lib/format";
+import { getOrganizations } from "../../../lib/organization";
+import OrganizationPicker from "../../../components/OrganizationPicker";
+import OrderActions from "../../../components/OrderActions";
 import {
   MATCH_METHOD_LABELS, ORDER_STATUS_LABELS, candidatePayments, effectiveStatus,
   type OrderRow, type UnmatchedPayment,
-} from "../../lib/orders";
+} from "../../../lib/orders";
 
 export default async function OrdersPage() {
   const supabase = await createSupabaseServerClient();
@@ -34,6 +34,7 @@ export default async function OrdersPage() {
   return <main className="main">
     <p className="muted">OPERACIONES / COBROS</p><h1 className="title">Órdenes y pagos</h1>
     <OrganizationPicker organizations={organizations} activeId={activeId} />
+    <div className="page-actions"><Link href="/orders/new" className="btn-primary">+ Crear orden de pago</Link></div>
     <p className="muted">«Pago detectado» significa que llegó la notificación del banco y cuadra con la orden. Pasa a «Confirmado» cuando el movimiento aparece en el extracto.</p>
     {review > 0 && <div className="panel" role="alert"><strong>{review} orden(es) requieren tu revisión:</strong> llegó un pago con el mismo monto pero nada más confirma quién pagó.</div>}
 

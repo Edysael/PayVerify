@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "../../../lib/supabase-server";
-import ClientInviteForm from "../../../components/ClientInviteForm";
+import { createSupabaseServerClient } from "../../../../lib/supabase-server";
+import ClientInviteForm from "../../../../components/ClientInviteForm";
 
 // Alta de clientes: solo administradores de plataforma (pv_platform_admins).
 export default async function NuevoClientePage() {

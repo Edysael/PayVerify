@@ -1,8 +1,8 @@
 import Link from "next/link";
-import {createSupabaseServerClient} from "../../../lib/supabase-server";
-import {getOrganizations} from "../../../lib/organization";
-import OrganizationPicker from "../../../components/OrganizationPicker";
-import SenderRules from "../../../components/SenderRules";
+import {createSupabaseServerClient} from "../../../../lib/supabase-server";
+import {getOrganizations} from "../../../../lib/organization";
+import OrganizationPicker from "../../../../components/OrganizationPicker";
+import SenderRules from "../../../../components/SenderRules";
 export default async function SenderSettingsPage(){
  const supabase=await createSupabaseServerClient();if(!supabase)return <main className="main"><h1>Remitentes</h1><p>Configura Supabase.</p></main>;
  const {data:{user}}=await supabase.auth.getUser();if(!user)return <main className="main"><h1>Remitentes</h1><Link href="/sign-in">Iniciar sesión</Link></main>;

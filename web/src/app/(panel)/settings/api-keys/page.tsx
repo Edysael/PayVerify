@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "../../../lib/supabase-server";
-import { getOrganizations } from "../../../lib/organization";
-import OrganizationPicker from "../../../components/OrganizationPicker";
-import ApiKeyManager, { type ApiKeyRow } from "../../../components/ApiKeyManager";
+import { createSupabaseServerClient } from "../../../../lib/supabase-server";
+import { getOrganizations } from "../../../../lib/organization";
+import OrganizationPicker from "../../../../components/OrganizationPicker";
+import ApiKeyManager, { type ApiKeyRow } from "../../../../components/ApiKeyManager";
 
 export default async function ApiKeysPage() {
   const supabase = await createSupabaseServerClient();

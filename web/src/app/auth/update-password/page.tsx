@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { LogoMark } from '../../../components/ui/Icons';
 
 const MIN_PASSWORD = 8;
-const input: React.CSSProperties = { display: 'block', width: '100%', padding: 12, margin: '6px 0 14px', border: '1px solid #cbd5e1', borderRadius: 8 };
+const input: React.CSSProperties = { display: 'block', width: '100%', height: 48, margin: '6px 0 14px' };
 
 // Se llega aquí desde el enlace de "Olvidé mi contraseña" (el callback ya abrió la sesión).
 export default function UpdatePasswordPage() {
@@ -27,8 +28,9 @@ export default function UpdatePasswordPage() {
     } finally { setBusy(false); }
   }
 
-  return <main style={{ maxWidth: 420, margin: '10vh auto', padding: 24, background: 'white', borderRadius: 16 }}>
-    <h1>Nueva contraseña</h1>
+  return <main className="auth"><div className="auth-card">
+    <div className="brand" aria-label="PayVerify"><LogoMark size={46} /><span><span className="brand-name">PayVerify</span><span className="brand-tag" style={{ display: 'block' }}>Verificación y Conciliación de Pagos</span></span></div>
+    <h1 style={{ fontSize: 24, marginBottom: 6 }}>Nueva contraseña</h1>
     <form onSubmit={onSubmit} method="post" action="#">
       <label htmlFor="password">Contraseña nueva</label>
       <input id="password" name="password" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD}
@@ -36,10 +38,10 @@ export default function UpdatePasswordPage() {
       <label htmlFor="confirm">Repite la contraseña</label>
       <input id="confirm" name="confirm" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD}
         value={confirm} onChange={e => setConfirm(e.target.value)} style={input} />
-      <button type="submit" disabled={busy} style={{ width: '100%', padding: '12px 18px', background: '#111b2c', color: 'white', border: 0, borderRadius: 8 }}>
+      <button type="submit" className="primary" disabled={busy} style={{ width: '100%', height: 48 }}>
         {busy ? 'Guardando…' : 'Guardar contraseña'}
       </button>
     </form>
     <p role="status">{message}</p>
-  </main>;
+  </div></main>;
 }
